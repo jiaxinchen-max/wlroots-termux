@@ -465,6 +465,7 @@ bool wlr_backend_test(struct wlr_backend *backend,
 
 bool wlr_backend_commit(struct wlr_backend *backend,
 		const struct wlr_backend_output_state *states, size_t states_len) {
+
 	if (!backend->impl->commit) {
 		for (size_t i = 0; i < states_len; i++) {
 			const struct wlr_backend_output_state *state = &states[i];
