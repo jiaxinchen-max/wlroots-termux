@@ -1848,10 +1848,20 @@ void scan_drm_connectors(struct wlr_drm_backend *drm,
 
 	for (size_t i = 0; i < new_outputs_len; ++i) {
 		struct wlr_drm_connector *conn = new_outputs[i];
-
-		wlr_drm_conn_log(conn, WLR_INFO, "Requesting modeset");
-		wl_signal_emit_mutable(&drm->backend.events.new_output,
-			&conn->output);
+		if(conn->tile_info.group_id) {
+			struct wlr_output_group *group = wlr_output_group_match_tile(&conn->tile_info);
+			if (group) {
+				wlr_drm_conn_log(conn, WLR_INFO, "Adding %s to existing group", conn->name);
+			} else {
+				wlr_drm_conn_log(conn, WLR_INFO, "Creating output group for %s", conn->name);
+				group = wlr_output_group_create();
+			}
+			wlr_output_group_add_tile(group, &conn->output, &conn->tile_info);
+		} else {
+			wlr_drm_conn_log(conn, WLR_INFO, "Requesting modeset");
+			wl_signal_emit_mutable(&drm->backend.events.new_output,
+				&conn->output);
+		}
 	}
 }
 
