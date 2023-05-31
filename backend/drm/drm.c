@@ -16,6 +16,7 @@
 #include <wlr/interfaces/wlr_output.h>
 #include <wlr/render/drm_syncobj.h>
 #include <wlr/render/wlr_renderer.h>
+#include <wlr/types/wlr_output_group.h>
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
 #include <wlr/util/transform.h>
@@ -1698,6 +1699,12 @@ static bool connect_drm_connector(struct wlr_drm_connector *wlr_conn,
 		wlr_conn->id, wlr_conn->props.edid, &edid_len);
 	parse_edid(wlr_conn, edid_len, edid);
 	free(edid);
+
+	size_t tile_len = 0;
+	uint8_t *tile = get_drm_prop_blob(drm->fd,
+		wlr_conn->id, wlr_conn->props.tile, &tile_len);
+	parse_tile(wlr_conn, tile_len, tile);
+	free(tile);
 
 	char *subconnector = NULL;
 	if (wlr_conn->props.subconnector) {
