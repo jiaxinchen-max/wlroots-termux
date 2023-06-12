@@ -656,6 +656,7 @@ static bool output_basic_test(struct wlr_output *output,
 		}
 
 		for (size_t i = 0; i < state->layers_len; i++) {
+			assert(state->layers[i].layer != NULL);
 			state->layers[i].accepted = false;
 		}
 	}
