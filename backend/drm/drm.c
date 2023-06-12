@@ -804,11 +804,7 @@ static bool drm_connector_set_pending_layer_fbs(struct wlr_drm_connector *conn,
 			return false;
 		}
 
-		if (layer_state->buffer != NULL) {
-			drm_fb_import(&layer->pending_fb, drm, layer_state->buffer, NULL);
-		} else {
-			drm_fb_clear(&layer->pending_fb);
-		}
+		drm_fb_import(&layer->pending_fb, drm, layer_state->buffer, NULL);
 	}
 
 	return true;

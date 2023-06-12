@@ -67,6 +67,10 @@ static void output_handle_frame(struct wl_listener *listener, void *data) {
 	struct wl_array layers_arr = {0};
 	struct output_surface *output_surface;
 	wl_list_for_each(output_surface, &output->surfaces, link) {
+		if (output_surface->buffer == NULL) {
+			continue;
+		}
+
 		struct wlr_output_layer_state *layer_state =
 			wl_array_add(&layers_arr, sizeof(*layer_state));
 		*layer_state = (struct wlr_output_layer_state){
@@ -103,6 +107,10 @@ static void output_handle_frame(struct wl_listener *listener, void *data) {
 	size_t i = 0;
 	struct wlr_output_layer_state *layers = layers_arr.data;
 	wl_list_for_each(output_surface, &output->surfaces, link) {
+		if (output_surface->buffer == NULL) {
+			continue;
+		}
+
 		struct wlr_surface *wlr_surface = output_surface->wlr_surface;
 
 		output_surface->layer_accepted = layers[i].accepted;

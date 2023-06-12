@@ -485,29 +485,29 @@ static bool output_test(struct wlr_output *wlr_output,
 		bool supported = output->backend->subcompositor != NULL;
 		for (ssize_t i = state->layers_len - 1; i >= 0; i--) {
 			struct wlr_output_layer_state *layer_state = &state->layers[i];
-			if (layer_state->buffer != NULL) {
-				int x = layer_state->dst_box.x;
-				int y = layer_state->dst_box.y;
-				int width = layer_state->dst_box.width;
-				int height = layer_state->dst_box.height;
-				bool needs_viewport = width != layer_state->buffer->width ||
-					height != layer_state->buffer->height;
-				if (!wlr_fbox_empty(&layer_state->src_box)) {
-					needs_viewport = needs_viewport ||
-						layer_state->src_box.x != 0 ||
-						layer_state->src_box.y != 0 ||
-						layer_state->src_box.width != width ||
-						layer_state->src_box.height != height;
-				}
-				if (x < 0 || y < 0 ||
-						x + width > wlr_output->width ||
-						y + height > wlr_output->height ||
-						(output->backend->viewporter == NULL && needs_viewport)) {
-					supported = false;
-				}
-				supported = supported &&
-					test_buffer(output->backend, layer_state->buffer);
+
+			int x = layer_state->dst_box.x;
+			int y = layer_state->dst_box.y;
+			int width = layer_state->dst_box.width;
+			int height = layer_state->dst_box.height;
+			bool needs_viewport = width != layer_state->buffer->width ||
+				height != layer_state->buffer->height;
+			if (!wlr_fbox_empty(&layer_state->src_box)) {
+				needs_viewport = needs_viewport ||
+					layer_state->src_box.x != 0 ||
+					layer_state->src_box.y != 0 ||
+					layer_state->src_box.width != width ||
+					layer_state->src_box.height != height;
 			}
+			if (x < 0 || y < 0 ||
+					x + width > wlr_output->width ||
+					y + height > wlr_output->height ||
+					(output->backend->viewporter == NULL && needs_viewport)) {
+				supported = false;
+			}
+			supported = supported &&
+				test_buffer(output->backend, layer_state->buffer);
+
 			layer_state->accepted = supported;
 		}
 	}
@@ -571,19 +571,23 @@ static struct wlr_wl_output_layer *get_or_create_output_layer(
 
 static bool has_layers_order_changed(struct wlr_wl_output *output,
 		struct wlr_output_layer_state *layers, size_t layers_len) {
-	// output_basic_check() ensures that layers_len equals the number of
-	// registered output layers
-	size_t i = 0;
-	struct wlr_output_layer *layer;
-	wl_list_for_each(layer, &output->wlr_output.layers, link) {
-		assert(i < layers_len);
-		const struct wlr_output_layer_state *layer_state = &layers[i];
-		if (layer_state->layer != layer) {
+	// Iterate over all enabled layers, check whether the list of all existing
+	// layers has the same ordering
+	struct wl_list *cur = output->wlr_output.layers.next;
+	for (size_t i = 0; i < layers_len; i++) {
+		bool found = false;
+		while (cur != &output->wlr_output.layers) {
+			struct wlr_output_layer *layer = wl_container_of(cur, layer, link);
+			if (layer == layers[i].layer) {
+				found = true;
+				break;
+			}
+			cur = cur->next;
+		}
+		if (!found) {
 			return true;
 		}
-		i++;
 	}
-	assert(i == layers_len);
 	return false;
 }
 
@@ -620,11 +624,6 @@ static bool output_layer_commit(struct wlr_wl_output *output,
 	if (state->layer->dst_box.x != state->dst_box.x ||
 			state->layer->dst_box.y != state->dst_box.y) {
 		wl_subsurface_set_position(layer->subsurface, state->dst_box.x, state->dst_box.y);
-	}
-
-	if (state->buffer == NULL) {
-		output_layer_unmap(layer);
-		return true;
 	}
 
 	struct wlr_wl_buffer *buffer =
@@ -664,22 +663,23 @@ static bool output_layer_commit(struct wlr_wl_output *output,
 }
 
 static bool commit_layers(struct wlr_wl_output *output,
-		struct wlr_output_layer_state *layers, size_t layers_len) {
-	if (output->backend->subcompositor == NULL) {
+		const struct wlr_output_state *state) {
+	if (!(state->committed & WLR_OUTPUT_STATE_LAYERS) ||
+			output->backend->subcompositor == NULL) {
 		return true;
 	}
 
-	bool reordered = has_layers_order_changed(output, layers, layers_len);
+	bool reordered = has_layers_order_changed(output, state->layers, state->layers_len);
 
 	struct wlr_wl_output_layer *prev_layer = NULL;
-	for (size_t i = 0; i < layers_len; i++) {
+	for (size_t i = 0; i < state->layers_len; i++) {
 		struct wlr_wl_output_layer *layer =
-			get_or_create_output_layer(output, layers[i].layer);
+			get_or_create_output_layer(output, state->layers[i].layer);
 		if (layer == NULL) {
 			return false;
 		}
 
-		if (!layers[i].accepted) {
+		if (!state->layers[i].accepted) {
 			output_layer_unmap(layer);
 			continue;
 		}
@@ -689,11 +689,23 @@ static bool commit_layers(struct wlr_wl_output *output,
 				prev_layer->surface);
 		}
 
-		if (!output_layer_commit(output, layer, &layers[i])) {
+		if (!output_layer_commit(output, layer, &state->layers[i])) {
 			return false;
 		}
 
 		prev_layer = layer;
+	}
+
+	struct wlr_output_layer *wlr_layer;
+	wl_list_for_each(wlr_layer, &output->wlr_output.layers, link) {
+		if (wlr_output_state_is_layer_enabled(state, wlr_layer)) {
+			continue;
+		}
+		struct wlr_wl_output_layer *layer =
+			get_or_create_output_layer(output, wlr_layer);
+		if (layer != NULL) {
+			output_layer_unmap(layer);
+		}
 	}
 
 	return true;
@@ -829,8 +841,7 @@ static bool output_commit(struct wlr_output *wlr_output,
 		}
 	}
 
-	if ((state->committed & WLR_OUTPUT_STATE_LAYERS) &&
-			!commit_layers(output, state->layers, state->layers_len)) {
+	if (!commit_layers(output, state)) {
 		return false;
 	}
 
