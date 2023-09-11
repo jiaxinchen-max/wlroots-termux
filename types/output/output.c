@@ -599,8 +599,13 @@ static bool output_basic_test(struct wlr_output *output,
 		wlr_drm_format_finish(&format);
 	}
 
-	bool enabled = output_pending_enabled(output, state);
+	if ((state->committed & WLR_OUTPUT_STATE_ENABLED) && state->enabled &&
+			(state->committed & WLR_OUTPUT_STATE_BUFFER) == 0) {
+		wlr_log(WLR_DEBUG, "Tried to enable an output without a buffer");
+		return false;
+	}
 
+	bool enabled = output_pending_enabled(output, state);
 	if (enabled && (state->committed & (WLR_OUTPUT_STATE_ENABLED |
 			WLR_OUTPUT_STATE_MODE))) {
 		int pending_width, pending_height;
