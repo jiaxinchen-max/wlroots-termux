@@ -431,7 +431,7 @@ static void update_node_update_outputs(struct wlr_scene_node *node,
 			.x = scene_output->x,
 			.y = scene_output->y,
 		};
-		wlr_output_effective_resolution(scene_output->output,
+		wlr_output_effective_resolution(scene_output->output, NULL,
 			&output_box.width, &output_box.height);
 
 		pixman_region32_t intersection;
@@ -2309,7 +2309,7 @@ static void scene_output_for_each_scene_buffer(const struct wlr_box *output_box,
 void wlr_scene_output_for_each_buffer(struct wlr_scene_output *scene_output,
 		wlr_scene_buffer_iterator_func_t iterator, void *user_data) {
 	struct wlr_box box = { .x = scene_output->x, .y = scene_output->y };
-	wlr_output_effective_resolution(scene_output->output,
+	wlr_output_effective_resolution(scene_output->output, NULL,
 		&box.width, &box.height);
 	scene_output_for_each_scene_buffer(&box, &scene_output->scene->tree.node, 0, 0,
 		iterator, user_data);

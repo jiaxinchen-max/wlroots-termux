@@ -64,7 +64,7 @@ static void output_layout_output_get_box(
 		struct wlr_box *box) {
 	box->x = l_output->x;
 	box->y = l_output->y;
-	wlr_output_effective_resolution(l_output->output,
+	wlr_output_effective_resolution(l_output->output, NULL,
 		&box->width, &box->height);
 }
 

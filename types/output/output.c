@@ -443,10 +443,16 @@ void wlr_output_transformed_resolution(struct wlr_output *output,
 }
 
 void wlr_output_effective_resolution(struct wlr_output *output,
-		int *width, int *height) {
-	wlr_output_transformed_resolution(output, NULL, width, height);
-	*width /= output->scale;
-	*height /= output->scale;
+	const struct wlr_output_state *state, int *width, int *height) {
+	wlr_output_transformed_resolution(output, state, width, height);
+
+	float scale = output->scale;
+	if (state && state->committed & WLR_OUTPUT_STATE_SCALE) {
+		scale = state->scale;
+	}
+
+	*width /= scale;
+	*height /= scale;
 }
 
 struct wlr_output_mode *wlr_output_preferred_mode(struct wlr_output *output) {

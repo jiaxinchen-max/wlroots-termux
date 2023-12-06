@@ -85,7 +85,7 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
 	int32_t width, height;
-	wlr_output_effective_resolution(wlr_output, &width, &height);
+	wlr_output_effective_resolution(wlr_output, NULL, &width, &height);
 
 	struct wlr_output_state output_state;
 	wlr_output_state_init(&output_state);

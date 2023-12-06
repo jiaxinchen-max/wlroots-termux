@@ -46,7 +46,7 @@ static void output_update(struct wlr_xdg_output_v1 *xdg_output) {
 	}
 
 	int width, height;
-	wlr_output_effective_resolution(layout_output->output, &width, &height);
+	wlr_output_effective_resolution(layout_output->output, NULL, &width, &height);
 	if (xdg_output->width != width || xdg_output->height != height) {
 		xdg_output->width = width;
 		xdg_output->height = height;

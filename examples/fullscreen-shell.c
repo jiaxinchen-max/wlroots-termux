@@ -86,7 +86,7 @@ static void output_handle_frame(struct wl_listener *listener, void *data) {
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	int width, height;
-	wlr_output_effective_resolution(output->wlr_output, &width, &height);
+	wlr_output_effective_resolution(output->wlr_output, NULL, &width, &height);
 
 	struct wlr_output_state state;
 	wlr_output_state_init(&state);
