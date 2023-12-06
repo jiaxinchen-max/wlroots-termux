@@ -584,6 +584,12 @@ static bool output_basic_test(struct wlr_output *output,
 		}
 	}
 
+	if ((state->committed & WLR_OUTPUT_STATE_RENDER_FORMAT) &&
+			(state->committed & WLR_OUTPUT_STATE_BUFFER) == 0) {
+		wlr_log(WLR_DEBUG, "Tried to change the render format without a buffer.");
+		return false;
+	}
+
 	if (state->committed & WLR_OUTPUT_STATE_RENDER_FORMAT) {
 		struct wlr_allocator *allocator = output->allocator;
 		assert(allocator != NULL);
