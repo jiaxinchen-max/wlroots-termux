@@ -684,16 +684,7 @@ bool wlr_output_test_state(struct wlr_output *output,
 		return true;
 	}
 
-	bool new_back_buffer = false;
-	if (!output_ensure_buffer(output, &copy, &new_back_buffer)) {
-		return false;
-	}
-
-	bool success = output->impl->test(output, &copy);
-	if (new_back_buffer) {
-		wlr_buffer_unlock(copy.buffer);
-	}
-	return success;
+	return output->impl->test(output, &copy);
 }
 
 bool output_prepare_commit(struct wlr_output *output, const struct wlr_output_state *state) {
@@ -755,27 +746,15 @@ bool wlr_output_commit_state(struct wlr_output *output,
 		return false;
 	}
 
-	bool new_back_buffer = false;
-	if (!output_ensure_buffer(output, &pending, &new_back_buffer)) {
-		return false;
-	}
-
 	if (!output_prepare_commit(output, &pending)) {
 		return false;
 	}
 
 	if (!output->impl->commit(output, &pending)) {
-		if (new_back_buffer) {
-			wlr_buffer_unlock(pending.buffer);
-		}
 		return false;
 	}
 
 	output_apply_commit(output, &pending);
-
-	if (new_back_buffer) {
-		wlr_buffer_unlock(pending.buffer);
-	}
 
 	return true;
 }
