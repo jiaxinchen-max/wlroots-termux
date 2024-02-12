@@ -69,6 +69,17 @@ struct wlr_ext_image_capture_source_v1_cursor {
 };
 
 /**
+ * Interface exposing one screen capture source per output.
+ */
+struct wlr_ext_output_image_capture_source_manager_v1 {
+	struct wl_global *global;
+
+	// private state
+
+	struct wl_listener display_destroy;
+};
+
+/**
  * Obtain a struct wlr_ext_image_capture_source_v1 from an ext_image_capture_source_v1
  * resource.
  *
@@ -76,5 +87,8 @@ struct wlr_ext_image_capture_source_v1_cursor {
  * is inert.
  */
 struct wlr_ext_image_capture_source_v1 *wlr_ext_image_capture_source_v1_from_resource(struct wl_resource *resource);
+
+struct wlr_ext_output_image_capture_source_manager_v1 *wlr_ext_output_image_capture_source_manager_v1_create(
+	struct wl_display *display, uint32_t version);
 
 #endif
