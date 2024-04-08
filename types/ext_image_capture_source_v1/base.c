@@ -69,3 +69,14 @@ bool wlr_ext_image_capture_source_v1_create_resource(struct wlr_ext_image_captur
 	}
 	return true;
 }
+
+void wlr_ext_image_capture_source_v1_cursor_init(struct wlr_ext_image_capture_source_v1_cursor *source_cursor,
+		const struct wlr_ext_image_capture_source_v1_interface *impl) {
+	*source_cursor = (struct wlr_ext_image_capture_source_v1_cursor){0};
+	wlr_ext_image_capture_source_v1_init(&source_cursor->base, impl);
+	wl_signal_init(&source_cursor->events.update);
+}
+
+void wlr_ext_image_capture_source_v1_cursor_finish(struct wlr_ext_image_capture_source_v1_cursor *source_cursor) {
+	wlr_ext_image_capture_source_v1_finish(&source_cursor->base);
+}

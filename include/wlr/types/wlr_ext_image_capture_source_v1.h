@@ -49,6 +49,26 @@ struct wlr_ext_image_capture_source_v1_frame_event {
 };
 
 /**
+ * A cursor capture source.
+ *
+ * Provides additional cursor-specific functionality on top of
+ * struct wlr_ext_image_capture_source_v1.
+ */
+struct wlr_ext_image_capture_source_v1_cursor {
+	struct wlr_ext_image_capture_source_v1 base;
+
+	bool entered;
+	int32_t x, y;
+	struct {
+		int32_t x, y;
+	} hotspot;
+
+	struct {
+		struct wl_signal update;
+	} events;
+};
+
+/**
  * Obtain a struct wlr_ext_image_capture_source_v1 from an ext_image_capture_source_v1
  * resource.
  *
