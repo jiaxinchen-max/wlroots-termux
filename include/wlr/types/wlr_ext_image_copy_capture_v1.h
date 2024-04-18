@@ -53,5 +53,10 @@ void wlr_ext_image_copy_capture_frame_v1_ready(struct wlr_ext_image_copy_capture
  */
 void wlr_ext_image_copy_capture_frame_v1_fail(struct wlr_ext_image_copy_capture_frame_v1 *frame,
 	enum ext_image_copy_capture_frame_v1_failure_reason reason);
+/**
+ * Copy a struct wlr_buffer into the client-provided buffer for the frame.
+ */
+bool wlr_ext_image_copy_capture_frame_v1_copy_buffer(struct wlr_ext_image_copy_capture_frame_v1 *frame,
+	struct wlr_buffer *src, struct wlr_renderer *renderer);
 
 #endif

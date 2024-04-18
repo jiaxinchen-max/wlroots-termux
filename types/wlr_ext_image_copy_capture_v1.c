@@ -106,6 +106,95 @@ void wlr_ext_image_copy_capture_frame_v1_ready(struct wlr_ext_image_copy_capture
 	frame_destroy(frame);
 }
 
+static bool copy_dmabuf(struct wlr_buffer *dst,
+		struct wlr_buffer *src, struct wlr_renderer *renderer,
+		const pixman_region32_t *clip) {
+	struct wlr_texture *texture = wlr_texture_from_buffer(renderer, src);
+	if (texture == NULL) {
+		return false;
+	}
+
+	bool ok = false;
+	struct wlr_render_pass *pass = wlr_renderer_begin_buffer_pass(renderer, dst, NULL);
+	if (!pass) {
+		goto out;
+	}
+
+	wlr_render_pass_add_texture(pass, &(struct wlr_render_texture_options) {
+		.texture = texture,
+		.clip = clip,
+		.blend_mode = WLR_RENDER_BLEND_MODE_NONE,
+	});
+
+	ok = wlr_render_pass_submit(pass);
+
+out:
+	wlr_texture_destroy(texture);
+	return ok;
+}
+
+static bool copy_shm(void *data, uint32_t format, size_t stride,
+		struct wlr_buffer *src, struct wlr_renderer *renderer) {
+	// TODO: bypass renderer if source buffer supports data ptr access
+	struct wlr_texture *texture = wlr_texture_from_buffer(renderer, src);
+	if (!texture) {
+		return false;
+	}
+
+	// TODO: only copy damaged region
+	bool ok = wlr_texture_read_pixels(texture, &(struct wlr_texture_read_pixels_options){
+		.data = data,
+		.format = format,
+		.stride = stride,
+	});
+
+	wlr_texture_destroy(texture);
+
+	return ok;
+}
+
+bool wlr_ext_image_copy_capture_frame_v1_copy_buffer(struct wlr_ext_image_copy_capture_frame_v1 *frame,
+		struct wlr_buffer *src, struct wlr_renderer *renderer) {
+	struct wlr_buffer *dst = frame->buffer;
+
+	if (src->width != dst->width || src->height != dst->height) {
+		wlr_ext_image_copy_capture_frame_v1_fail(frame,
+			EXT_IMAGE_COPY_CAPTURE_FRAME_V1_FAILURE_REASON_BUFFER_CONSTRAINTS);
+		return false;
+	}
+
+	bool ok = false;
+	enum ext_image_copy_capture_frame_v1_failure_reason failure_reason =
+		EXT_IMAGE_COPY_CAPTURE_FRAME_V1_FAILURE_REASON_UNKNOWN;
+	struct wlr_dmabuf_attributes dmabuf;
+	void *data;
+	uint32_t format;
+	size_t stride;
+	if (wlr_buffer_get_dmabuf(dst, &dmabuf)) {
+		if (frame->session->source->dmabuf_formats.len == 0) {
+			ok = false;
+			failure_reason = EXT_IMAGE_COPY_CAPTURE_FRAME_V1_FAILURE_REASON_BUFFER_CONSTRAINTS;
+		} else {
+			ok = copy_dmabuf(dst, src, renderer, &frame->buffer_damage);
+		}
+	} else if (wlr_buffer_begin_data_ptr_access(dst,
+			WLR_BUFFER_DATA_PTR_ACCESS_WRITE, &data, &format, &stride)) {
+		if (frame->session->source->shm_formats_len == 0) {
+			ok = false;
+			failure_reason = EXT_IMAGE_COPY_CAPTURE_FRAME_V1_FAILURE_REASON_BUFFER_CONSTRAINTS;
+		} else {
+			ok = copy_shm(data, format, stride, src, renderer);
+		}
+		wlr_buffer_end_data_ptr_access(dst);
+	}
+	if (!ok) {
+		wlr_ext_image_copy_capture_frame_v1_fail(frame, failure_reason);
+		return false;
+	}
+
+	return true;
+}
+
 void wlr_ext_image_copy_capture_frame_v1_fail(struct wlr_ext_image_copy_capture_frame_v1 *frame,
 		enum ext_image_copy_capture_frame_v1_failure_reason reason) {
 	ext_image_copy_capture_frame_v1_send_failed(frame->resource, reason);
