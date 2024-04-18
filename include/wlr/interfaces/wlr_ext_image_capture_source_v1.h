@@ -13,6 +13,8 @@
 #include <wlr/types/wlr_ext_image_capture_source_v1.h>
 
 struct wlr_ext_image_copy_capture_frame_v1;
+struct wlr_swapchain;
+struct wlr_renderer;
 struct wlr_seat;
 
 struct wlr_ext_image_capture_source_v1_interface {
@@ -29,6 +31,9 @@ void wlr_ext_image_capture_source_v1_init(struct wlr_ext_image_capture_source_v1
 void wlr_ext_image_capture_source_v1_finish(struct wlr_ext_image_capture_source_v1 *source);
 bool wlr_ext_image_capture_source_v1_create_resource(struct wlr_ext_image_capture_source_v1 *source,
 	struct wl_client *client, uint32_t new_id);
+bool wlr_ext_image_capture_source_v1_set_constraints_from_swapchain(
+	struct wlr_ext_image_capture_source_v1 *source,
+	struct wlr_swapchain *swapchain, struct wlr_renderer *renderer);
 
 void wlr_ext_image_capture_source_v1_cursor_init(struct wlr_ext_image_capture_source_v1_cursor *source_cursor,
 		const struct wlr_ext_image_capture_source_v1_interface *impl);
