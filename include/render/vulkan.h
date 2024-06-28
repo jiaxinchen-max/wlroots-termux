@@ -61,6 +61,8 @@ struct wlr_vk_device {
 	struct wlr_drm_format_set dmabuf_render_formats;
 	struct wlr_drm_format_set dmabuf_texture_formats;
 	struct wlr_drm_format_set shm_texture_formats;
+
+	int refcnt;
 };
 
 // Tries to find the VkPhysicalDevice for the given drm fd.
@@ -72,6 +74,8 @@ int vulkan_open_phdev_drm_fd(VkPhysicalDevice phdev);
 struct wlr_vk_device *vulkan_device_create(struct wlr_vk_instance *ini,
 	VkPhysicalDevice phdev);
 void vulkan_device_destroy(struct wlr_vk_device *dev);
+void vulkan_device_ref(struct wlr_vk_device *dev);
+void vulkan_device_unref(struct wlr_vk_device *dev);
 
 // Tries to find any memory bit for the given vulkan device that
 // supports the given flags and is set in req_bits (e.g. if memory
