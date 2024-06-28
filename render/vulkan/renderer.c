@@ -1427,6 +1427,7 @@ static const struct wlr_renderer_impl renderer_impl = {
 	.get_drm_fd = vulkan_get_drm_fd,
 	.texture_from_buffer = vulkan_texture_from_buffer,
 	.begin_buffer_pass = vulkan_begin_buffer_pass,
+	.get_allocator = vulkan_get_allocator,
 };
 
 // Initializes the VkDescriptorSetLayout and VkPipelineLayout needed

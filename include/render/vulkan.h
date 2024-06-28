@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <vulkan/vulkan.h>
+#include <wlr/render/allocator.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/render/wlr_texture.h>
 #include <wlr/render/drm_format_set.h>
@@ -262,6 +263,27 @@ struct wlr_vk_command_buffer {
 };
 
 #define VULKAN_COMMAND_BUFFERS_CAP 64
+
+struct wlr_vk_allocator {
+	struct wlr_allocator wlr_allocator;
+	struct wlr_backend *backend;
+	struct wlr_vk_device *dev;
+
+	int ref_cnt;
+};
+
+struct wlr_vk_buffer {
+	struct wlr_buffer base;
+	struct wlr_vk_allocator *alloc;
+
+	VkImage image;
+	VkDeviceMemory memory;
+
+	struct wlr_dmabuf_attributes dmabuf;
+};
+
+struct wlr_vk_buffer *vulkan_buffer_from_wlr_buffer(struct wlr_buffer *wlr_buf);
+struct wlr_allocator *vulkan_get_allocator(struct wlr_renderer *wlr_renderer);
 
 // Vulkan wlr_renderer implementation on top of a wlr_vk_device.
 struct wlr_vk_renderer {
