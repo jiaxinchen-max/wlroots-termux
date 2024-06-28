@@ -77,6 +77,15 @@ struct wlr_renderer *wlr_renderer_autocreate(struct wlr_backend *backend);
 const struct wlr_drm_format_set *wlr_renderer_get_texture_formats(
 	struct wlr_renderer *r, uint32_t buffer_caps);
 
+
+/**
+ * Get the renderer-internal allocator, if available.
+ *
+ * The lifetime is independent of the renderer. Returns NULL if the renderer
+ * does not offer allocator capabilities.
+ */
+struct wlr_allocator *wlr_renderer_get_allocator(struct wlr_renderer *r);
+
 /**
  * Initializes wl_shm, linux-dmabuf and other buffer factory protocols.
  *

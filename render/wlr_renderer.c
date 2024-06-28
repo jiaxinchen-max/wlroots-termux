@@ -327,3 +327,10 @@ void wlr_render_timer_destroy(struct wlr_render_timer *timer) {
 	}
 	timer->impl->destroy(timer);
 }
+
+struct wlr_allocator *wlr_renderer_get_allocator(struct wlr_renderer *renderer) {
+	if (!renderer->impl->get_allocator) {
+		return NULL;
+	}
+	return renderer->impl->get_allocator(renderer);
+}
