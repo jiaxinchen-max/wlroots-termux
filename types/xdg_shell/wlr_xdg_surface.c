@@ -165,10 +165,7 @@ uint32_t wlr_xdg_surface_schedule_configure(struct wlr_xdg_surface *surface) {
 	struct wl_display *display = wl_client_get_display(surface->client->client);
 	struct wl_event_loop *loop = wl_display_get_event_loop(display);
 
-	if (!surface->initialized) {
-		wlr_log(WLR_ERROR, "A configure is scheduled for an uninitialized xdg_surface %p",
-			surface);
-	}
+	assert(surface->initialized);
 
 	if (surface->configure_idle == NULL) {
 		surface->scheduled_serial = wl_display_next_serial(display);

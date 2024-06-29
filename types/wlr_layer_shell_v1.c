@@ -292,10 +292,7 @@ static const struct zwlr_layer_surface_v1_interface layer_surface_implementation
 
 uint32_t wlr_layer_surface_v1_configure(struct wlr_layer_surface_v1 *surface,
 		uint32_t width, uint32_t height) {
-	if (!surface->initialized) {
-		wlr_log(WLR_ERROR, "A configure is sent to an uninitialized wlr_layer_surface_v1 %p",
-			surface);
-	}
+	assert(surface->initialized);
 
 	struct wl_display *display =
 		wl_client_get_display(wl_resource_get_client(surface->resource));
