@@ -388,6 +388,10 @@ static void session_destroy(struct wlr_ext_image_copy_capture_session_v1 *sessio
 			EXT_IMAGE_COPY_CAPTURE_FRAME_V1_FAILURE_REASON_STOPPED);
 	}
 
+	if (session->source->impl->stop) {
+		session->source->impl->stop(session->source);
+	}
+
 	ext_image_copy_capture_session_v1_send_stopped(session->resource);
 	wl_resource_set_user_data(session->resource, NULL);
 
@@ -453,6 +457,10 @@ static void session_create(struct wl_resource *parent_resource, uint32_t new_id,
 	if (session == NULL) {
 		wl_resource_post_no_memory(parent_resource);
 		return;
+	}
+
+	if (source->impl->start) {
+		source->impl->start(source, options & EXT_IMAGE_COPY_CAPTURE_MANAGER_V1_OPTIONS_PAINT_CURSORS);
 	}
 
 	session->resource = session_resource;
