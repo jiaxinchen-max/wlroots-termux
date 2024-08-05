@@ -107,12 +107,12 @@ static void pointer_constraint_set_cursor_position_hint(struct wl_client *client
 static void pointer_constraint_commit(
 		struct wlr_pointer_constraint_v1 *constraint) {
 	pixman_region32_clear(&constraint->region);
-	if (pixman_region32_not_empty(&constraint->current.region)) {
-		pixman_region32_intersect(&constraint->region,
-			&constraint->surface->input_region, &constraint->current.region);
-	} else {
+	if (pixman_region32_empty(&constraint->current.region)) {
 		pixman_region32_copy(&constraint->region,
 			&constraint->surface->input_region);
+	} else {
+		pixman_region32_intersect(&constraint->region,
+			&constraint->surface->input_region, &constraint->current.region);
 	}
 
 	if (constraint->current.committed & WLR_POINTER_CONSTRAINT_V1_STATE_REGION) {

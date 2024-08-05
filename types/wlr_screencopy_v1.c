@@ -297,7 +297,7 @@ static void frame_handle_output_commit(struct wl_listener *listener,
 	if (frame->with_damage) {
 		struct screencopy_damage *damage =
 			screencopy_damage_get_or_create(frame->client, output);
-		if (damage && !pixman_region32_not_empty(&damage->damage)) {
+		if (damage && pixman_region32_empty(&damage->damage)) {
 			return;
 		}
 	}

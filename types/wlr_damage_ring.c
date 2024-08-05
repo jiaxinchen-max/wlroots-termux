@@ -62,7 +62,7 @@ bool wlr_damage_ring_add(struct wlr_damage_ring *ring,
 	pixman_region32_init(&clipped);
 	pixman_region32_intersect_rect(&clipped, damage,
 		0, 0, ring->width, ring->height);
-	bool intersects = pixman_region32_not_empty(&clipped);
+	bool intersects = !pixman_region32_empty(&clipped);
 	if (intersects) {
 		pixman_region32_union(&ring->current, &ring->current, &clipped);
 	}
