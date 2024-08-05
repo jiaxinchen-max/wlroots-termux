@@ -231,6 +231,10 @@ struct wlr_xdg_surface_configure {
 struct wlr_xdg_surface_state {
 	uint32_t configure_serial;
 	struct wlr_box geometry;
+
+	// private state
+
+	bool initial_commit;
 };
 
 /**
@@ -289,6 +293,8 @@ struct wlr_xdg_surface {
 	// private state
 
 	struct wlr_surface_synced synced;
+
+	bool client_mapped;
 
 	struct wl_listener role_resource_destroy;
 };

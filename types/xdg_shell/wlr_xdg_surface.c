@@ -26,6 +26,7 @@ static void xdg_surface_configure_destroy(
 static void reset_xdg_surface(struct wlr_xdg_surface *surface) {
 	surface->configured = false;
 	surface->initialized = false;
+	surface->client_mapped = false;
 
 	struct wlr_xdg_popup *popup, *popup_tmp;
 	wl_list_for_each_safe(popup, popup_tmp, &surface->popups, link) {
@@ -260,7 +261,9 @@ static void xdg_surface_role_client_commit(struct wlr_surface *wlr_surface) {
 	struct wlr_xdg_surface *surface = wlr_xdg_surface_try_from_wlr_surface(wlr_surface);
 	assert(surface != NULL);
 
-	if (wlr_surface_state_has_buffer(&wlr_surface->pending) && !surface->configured) {
+	bool has_pending_buffer = wlr_surface_state_has_buffer(&wlr_surface->pending);
+
+	if (has_pending_buffer && !surface->configured) {
 		wlr_surface_reject_pending(wlr_surface, surface->resource,
 			XDG_SURFACE_ERROR_UNCONFIGURED_BUFFER, "xdg_surface has never been configured");
 		return;
@@ -287,22 +290,24 @@ static void xdg_surface_role_client_commit(struct wlr_surface *wlr_surface) {
 		}
 		break;
 	}
+
+	if (surface->client_mapped && !has_pending_buffer) {
+		reset_xdg_surface_role_object(surface);
+		reset_xdg_surface(surface);
+		surface->pending.initial_commit = false;
+	} else {
+		surface->pending.initial_commit = !surface->initialized;
+		surface->initialized = true;
+	}
+
+	surface->client_mapped = has_pending_buffer;
 }
 
 static void xdg_surface_role_commit(struct wlr_surface *wlr_surface) {
 	struct wlr_xdg_surface *surface = wlr_xdg_surface_try_from_wlr_surface(wlr_surface);
 	assert(surface != NULL);
 
-	if (surface->surface->unmap_commit) {
-		reset_xdg_surface_role_object(surface);
-		reset_xdg_surface(surface);
-
-		assert(!surface->initial_commit);
-		surface->initial_commit = false;
-	} else {
-		surface->initial_commit = !surface->initialized;
-		surface->initialized = true;
-	}
+	surface->initial_commit = surface->current.initial_commit && surface->initialized;
 
 	switch (surface->role) {
 	case WLR_XDG_SURFACE_ROLE_NONE:
