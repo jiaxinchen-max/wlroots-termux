@@ -2,6 +2,7 @@
 #include <drm_fourcc.h>
 #include <pixman.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <wayland-util.h>
 #include <wlr/render/interface.h>
 #include <wlr/util/box.h>
@@ -252,6 +253,11 @@ static struct wlr_texture *pixman_texture_from_buffer(
 			&data, &drm_format, &stride)) {
 		return NULL;
 	}
+	// This looks bad, because we're saying "end access" but also storing the
+	// pointer for later use.  However, we only access the texture data from
+	// render_pass_add_texture() which does a begin/end access, and
+	// begin_pixman_data_ptr_access() will handle if the data pointer changes
+	// between accesses.  So everything should be fine.
 	wlr_buffer_end_data_ptr_access(buffer);
 
 	struct wlr_pixman_texture *texture = pixman_texture_create(renderer,
@@ -335,8 +341,9 @@ struct wlr_renderer *wlr_pixman_renderer_create(void) {
 	const uint32_t *formats = get_pixman_drm_formats(&len);
 
 	for (size_t i = 0; i < len; ++i) {
-		wlr_drm_format_set_add(&renderer->drm_formats, formats[i],
-			DRM_FORMAT_MOD_INVALID);
+		// Only support linear buffers.  MOD_INVALID could mean the driver
+		// can do whatever it thinks appropriate, but pixman definitely
+		// only supports linear.
 		wlr_drm_format_set_add(&renderer->drm_formats, formats[i],
 			DRM_FORMAT_MOD_LINEAR);
 	}

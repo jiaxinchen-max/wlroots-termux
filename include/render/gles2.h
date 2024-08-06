@@ -42,7 +42,6 @@ struct wlr_gles2_renderer {
 	struct wlr_renderer wlr_renderer;
 
 	struct wlr_egl *egl;
-	int drm_fd;
 
 	struct wlr_drm_format_set shm_texture_formats;
 

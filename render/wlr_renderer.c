@@ -82,7 +82,7 @@ bool wlr_renderer_init_wl_display(struct wlr_renderer *r,
 		return false;
 	}
 
-	if (wlr_renderer_get_texture_formats(r, WLR_BUFFER_CAP_DMABUF) != NULL &&
+	if (wlr_renderer_get_texture_formats(r, r->render_buffer_caps) != NULL &&
 			wlr_renderer_get_drm_fd(r) >= 0 &&
 			wlr_linux_dmabuf_v1_create_with_renderer(wl_display, 4, r) == NULL) {
 		return false;
@@ -260,6 +260,14 @@ static struct wlr_renderer *renderer_autocreate(struct wlr_backend *backend, int
 
 	if ((is_auto && !has_render_node(backend)) || strcmp(renderer_name, "pixman") == 0) {
 		renderer = wlr_pixman_renderer_create();
+		if (open_preferred_drm_fd(backend, &drm_fd, &own_drm_fd)) {
+			wlr_log(WLR_DEBUG, "Creating pixman renderer with DRM FD %d", drm_fd);
+			renderer->drm_fd = drm_fd;
+		} else {
+			wlr_log(WLR_DEBUG, "Creating pixman renderer without DRM");
+			renderer->drm_fd = -1;
+		}
+
 		if (renderer) {
 			goto out;
 		} else {
@@ -287,11 +295,8 @@ struct wlr_renderer *wlr_renderer_autocreate(struct wlr_backend *backend) {
 	return renderer_autocreate(backend, -1);
 }
 
-int wlr_renderer_get_drm_fd(struct wlr_renderer *r) {
-	if (!r->impl->get_drm_fd) {
-		return -1;
-	}
-	return r->impl->get_drm_fd(r);
+int wlr_renderer_get_drm_fd(struct wlr_renderer *renderer) {
+	return renderer->drm_fd;
 }
 
 struct wlr_render_pass *wlr_renderer_begin_buffer_pass(struct wlr_renderer *renderer,

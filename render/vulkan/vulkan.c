@@ -452,7 +452,6 @@ struct wlr_vk_device *vulkan_device_create(struct wlr_vk_instance *ini,
 
 	dev->phdev = phdev;
 	dev->instance = ini;
-	dev->drm_fd = -1;
 
 	// For dmabuf import we require at least the external_memory_fd,
 	// external_memory_dma_buf, queue_family_foreign,
@@ -648,10 +647,6 @@ void vulkan_device_destroy(struct wlr_vk_device *dev) {
 
 	if (dev->dev) {
 		vkDestroyDevice(dev->dev, NULL);
-	}
-
-	if (dev->drm_fd > 0) {
-		close(dev->drm_fd);
 	}
 
 	wlr_drm_format_set_finish(&dev->dmabuf_render_formats);

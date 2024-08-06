@@ -25,7 +25,6 @@ struct wlr_renderer_impl {
 	const struct wlr_drm_format_set *(*get_render_formats)(
 		struct wlr_renderer *renderer);
 	void (*destroy)(struct wlr_renderer *renderer);
-	int (*get_drm_fd)(struct wlr_renderer *renderer);
 	struct wlr_texture *(*texture_from_buffer)(struct wlr_renderer *renderer,
 		struct wlr_buffer *buffer);
 	struct wlr_render_pass *(*begin_buffer_pass)(struct wlr_renderer *renderer,

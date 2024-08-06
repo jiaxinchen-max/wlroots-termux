@@ -1,7 +1,13 @@
 #include <assert.h>
+#include "config.h"
 #include <drm_fourcc.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <poll.h>
+#if HAVE_LINUX_DMA_BUF_H
+#include <linux/dma-buf.h>
+#include <sys/ioctl.h>
+#endif
 #include <sys/mman.h>
 #include <unistd.h>
 #include <wlr/backend.h>
@@ -118,9 +124,109 @@ static bool buffer_get_dmabuf(struct wlr_buffer *wlr_buffer,
 	return true;
 }
 
+static bool buffer_begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
+		uint32_t flags, void **data, uint32_t *format, size_t *stride) {
+	struct wlr_dmabuf_v1_buffer *buffer =
+		dmabuf_v1_buffer_from_buffer(wlr_buffer);
+
+	if (buffer->attributes.n_planes != 1) {
+		// The current data_ptr_access interface can't support buffers
+		// split across multiple planes.
+		wlr_log(WLR_DEBUG, "Can't do data access on multi-planar dmabuf");
+		return false;
+	}
+
+	*format = buffer->attributes.format;
+	*stride = buffer->attributes.stride[0];
+	int fd = buffer->attributes.fd[0];
+
+	// Poll fences on the dmabuf, check it's finished rendering
+	struct pollfd fence_poll = {
+		.fd = fd,
+		.events = POLLIN,
+	};
+	if (poll(&fence_poll, 1, -1) < 0) {
+		wlr_log(WLR_ERROR, "Fence poll failed: %s", strerror(errno));
+	}
+
+#if HAVE_LINUX_DMA_BUF_H
+	struct dma_buf_sync sync = {
+		.flags = DMA_BUF_SYNC_START,
+	};
+	if (flags & WLR_BUFFER_DATA_PTR_ACCESS_READ) {
+		sync.flags |= DMA_BUF_SYNC_READ;
+	}
+	if (flags & WLR_BUFFER_DATA_PTR_ACCESS_WRITE) {
+		sync.flags |= DMA_BUF_SYNC_WRITE;
+	}
+#endif
+
+	int mmap_flags = 0;
+	if (flags & WLR_BUFFER_DATA_PTR_ACCESS_READ) {
+		mmap_flags |= PROT_READ;
+	}
+	if (flags & WLR_BUFFER_DATA_PTR_ACCESS_WRITE) {
+		mmap_flags |= PROT_WRITE;
+	}
+
+	if (!buffer->addr) {
+		int size = *stride * buffer->attributes.height;
+		buffer->addr = mmap(NULL, size, mmap_flags,
+			MAP_SHARED, fd, buffer->attributes.offset[0]);
+		buffer->access_flags = flags;
+
+#if HAVE_LINUX_DMA_BUF_H
+		// dmabuf sync - this is for cache coherency
+		if (ioctl(fd, DMA_BUF_IOCTL_SYNC, &sync) < 0) {
+			wlr_log(WLR_ERROR, "dmabuf sync start failed: %s",
+				strerror(errno));
+		}
+#endif
+	}
+	if (buffer->addr == MAP_FAILED) {
+		wlr_log(WLR_ERROR, "Failed to map linux_dmabuf: %s",
+			strerror(errno));
+		*data = NULL;
+		return false;
+	}
+
+	*data = buffer->addr;
+	return true;
+}
+
+static void buffer_end_data_ptr_access(struct wlr_buffer *wlr_buffer) {
+	struct wlr_dmabuf_v1_buffer *buffer =
+		dmabuf_v1_buffer_from_buffer(wlr_buffer);
+
+#if HAVE_LINUX_DMA_BUF_H
+	struct dma_buf_sync sync = {
+		.flags = DMA_BUF_SYNC_END,
+	};
+	if (buffer->access_flags & WLR_BUFFER_DATA_PTR_ACCESS_READ) {
+		sync.flags |= DMA_BUF_SYNC_READ;
+	}
+	if (buffer->access_flags & WLR_BUFFER_DATA_PTR_ACCESS_WRITE) {
+		sync.flags |= DMA_BUF_SYNC_WRITE;
+	}
+	if (ioctl(buffer->attributes.fd[0], DMA_BUF_IOCTL_SYNC, &sync) < 0) {
+		wlr_log(WLR_ERROR, "dmabuf sync end failed: %s", strerror(errno));
+	}
+#endif
+
+	int res = munmap(buffer->addr,
+		buffer->attributes.stride[0] * buffer->attributes.height);
+	if (res < 0) {
+		wlr_log(WLR_ERROR, "Failed to munmap dmabuf: %s", strerror(errno));
+	}
+
+	buffer->addr = NULL;
+}
+
 static const struct wlr_buffer_impl buffer_impl = {
 	.destroy = buffer_destroy,
 	.get_dmabuf = buffer_get_dmabuf,
+	.begin_data_ptr_access = buffer_begin_data_ptr_access,
+	.end_data_ptr_access = buffer_end_data_ptr_access,
 };
 
 static void buffer_handle_release(struct wl_listener *listener, void *data) {
@@ -1099,8 +1205,9 @@ bool wlr_linux_dmabuf_feedback_v1_init_with_options(struct wlr_linux_dmabuf_feed
 
 	feedback->main_device = renderer_dev;
 
+	uint32_t buffer_caps = WLR_BUFFER_CAP_DMABUF | WLR_BUFFER_CAP_DATA_PTR;
 	const struct wlr_drm_format_set *renderer_formats =
-		wlr_renderer_get_texture_formats(options->main_renderer, WLR_BUFFER_CAP_DMABUF);
+		wlr_renderer_get_texture_formats(options->main_renderer, buffer_caps);
 	if (renderer_formats == NULL) {
 		wlr_log(WLR_ERROR, "Failed to get renderer DMA-BUF texture formats");
 		goto error;

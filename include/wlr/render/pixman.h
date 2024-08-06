@@ -13,7 +13,6 @@
 #include <wlr/render/wlr_renderer.h>
 
 struct wlr_renderer *wlr_pixman_renderer_create(void);
-
 bool wlr_renderer_is_pixman(struct wlr_renderer *wlr_renderer);
 bool wlr_texture_is_pixman(struct wlr_texture *texture);
 

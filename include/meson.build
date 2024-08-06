@@ -32,6 +32,9 @@ install_subdir('wlr',
 foreach name, have : internal_features
 	internal_config.set10('HAVE_' + name.underscorify().to_upper(), have)
 endforeach
+
+internal_config.set10('HAVE_LINUX_DMA_BUF_H', cc.has_header('linux/dma-buf.h'))
+
 wlr_files += configure_file(
 	output: 'config.h',
 	configuration: internal_config,

@@ -26,8 +26,8 @@ struct wlr_fbox;
  * A renderer for basic 2D operations.
  */
 struct wlr_renderer {
-	// Capabilities required for the buffer used as a render target (bitmask of
-	// enum wlr_buffer_cap)
+	// Capabilities required for the buffers used as texture sources and
+	// render target (bitmask of enum wlr_buffer_cap)
 	uint32_t render_buffer_caps;
 
 	struct {
@@ -46,6 +46,8 @@ struct wlr_renderer {
 		 */
 		bool output_color_transform;
 	} features;
+
+	int drm_fd;
 
 	// private state
 

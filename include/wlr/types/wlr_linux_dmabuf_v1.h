@@ -27,6 +27,11 @@ struct wlr_dmabuf_v1_buffer {
 	// private state
 
 	struct wl_listener release;
+	// Cache mapped address while ptr_data_access is open
+	void *addr;
+	// WLR_BUFFER_DATA_PTR_ACCESS_* flags describing the type of
+	// the current ptr_data_access
+	uint32_t access_flags;
 };
 
 /**

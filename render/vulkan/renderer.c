@@ -1148,6 +1148,11 @@ static void vulkan_destroy(struct wlr_renderer *wlr_renderer) {
 	struct wlr_vk_instance *ini = dev->instance;
 	vulkan_device_destroy(dev);
 	vulkan_instance_destroy(ini);
+
+	if (wlr_renderer->drm_fd > 0) {
+		close(wlr_renderer->drm_fd);
+	}
+
 	free(renderer);
 }
 
@@ -1384,11 +1389,6 @@ destroy_image:
 	return false;
 }
 
-static int vulkan_get_drm_fd(struct wlr_renderer *wlr_renderer) {
-	struct wlr_vk_renderer *renderer = vulkan_get_renderer(wlr_renderer);
-	return renderer->dev->drm_fd;
-}
-
 static struct wlr_render_pass *vulkan_begin_buffer_pass(struct wlr_renderer *wlr_renderer,
 		struct wlr_buffer *buffer, const struct wlr_buffer_pass_options *options) {
 	struct wlr_vk_renderer *renderer = vulkan_get_renderer(wlr_renderer);
@@ -1413,7 +1413,6 @@ static const struct wlr_renderer_impl renderer_impl = {
 	.get_texture_formats = vulkan_get_texture_formats,
 	.get_render_formats = vulkan_get_render_formats,
 	.destroy = vulkan_destroy,
-	.get_drm_fd = vulkan_get_drm_fd,
 	.texture_from_buffer = vulkan_texture_from_buffer,
 	.begin_buffer_pass = vulkan_begin_buffer_pass,
 };
@@ -2490,14 +2489,16 @@ struct wlr_renderer *wlr_vk_renderer_create_with_drm_fd(int drm_fd) {
 
 	// Do not use the drm_fd that was passed in: we should prefer the render
 	// node even if a primary node was provided
-	dev->drm_fd = vulkan_open_phdev_drm_fd(phdev);
-	if (dev->drm_fd < 0) {
+	int render_drm_fd = vulkan_open_phdev_drm_fd(phdev);
+	if (render_drm_fd < 0) {
 		vulkan_device_destroy(dev);
 		vulkan_instance_destroy(ini);
 		return NULL;
 	}
 
-	return vulkan_renderer_create_for_device(dev);
+	struct wlr_renderer *wlr_renderer = vulkan_renderer_create_for_device(dev);
+	wlr_renderer->drm_fd = render_drm_fd;
+	return wlr_renderer;
 }
 
 VkInstance wlr_vk_renderer_get_instance(struct wlr_renderer *renderer) {

@@ -183,17 +183,6 @@ static const struct wlr_drm_format_set *gles2_get_render_formats(
 	return wlr_egl_get_dmabuf_render_formats(renderer->egl);
 }
 
-static int gles2_get_drm_fd(struct wlr_renderer *wlr_renderer) {
-	struct wlr_gles2_renderer *renderer =
-		gles2_get_renderer(wlr_renderer);
-
-	if (renderer->drm_fd < 0) {
-		renderer->drm_fd = wlr_egl_dup_drm_fd(renderer->egl);
-	}
-
-	return renderer->drm_fd;
-}
-
 struct wlr_egl *wlr_gles2_renderer_get_egl(struct wlr_renderer *wlr_renderer) {
 	struct wlr_gles2_renderer *renderer =
 		gles2_get_renderer(wlr_renderer);
@@ -232,8 +221,8 @@ static void gles2_destroy(struct wlr_renderer *wlr_renderer) {
 
 	wlr_drm_format_set_finish(&renderer->shm_texture_formats);
 
-	if (renderer->drm_fd >= 0) {
-		close(renderer->drm_fd);
+	if (wlr_renderer->drm_fd >= 0) {
+		close(wlr_renderer->drm_fd);
 	}
 
 	free(renderer);
@@ -356,7 +345,6 @@ static const struct wlr_renderer_impl renderer_impl = {
 	.destroy = gles2_destroy,
 	.get_texture_formats = gles2_get_texture_formats,
 	.get_render_formats = gles2_get_render_formats,
-	.get_drm_fd = gles2_get_drm_fd,
 	.texture_from_buffer = gles2_texture_from_buffer,
 	.begin_buffer_pass = gles2_begin_buffer_pass,
 	.render_timer_create = gles2_render_timer_create,
@@ -533,7 +521,7 @@ struct wlr_renderer *wlr_gles2_renderer_create(struct wlr_egl *egl) {
 
 	renderer->egl = egl;
 	renderer->exts_str = exts_str;
-	renderer->drm_fd = -1;
+	renderer->wlr_renderer.drm_fd = -1;
 
 	wlr_log(WLR_INFO, "Creating GLES2 renderer");
 	wlr_log(WLR_INFO, "Using %s", glGetString(GL_VERSION));
@@ -682,6 +670,8 @@ struct wlr_renderer *wlr_gles2_renderer_create(struct wlr_egl *egl) {
 	wlr_egl_unset_current(renderer->egl);
 
 	get_gles2_shm_formats(renderer, &renderer->shm_texture_formats);
+
+	renderer->wlr_renderer.drm_fd = wlr_egl_dup_drm_fd(renderer->egl);
 
 	return &renderer->wlr_renderer;
 
