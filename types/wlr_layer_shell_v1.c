@@ -33,6 +33,7 @@ static void layer_surface_configure_destroy(
 static void layer_surface_reset(struct wlr_layer_surface_v1 *surface) {
 	surface->configured = false;
 	surface->initialized = false;
+	surface->client_mapped = false;
 
 	struct wlr_xdg_popup *popup, *popup_tmp;
 	wl_list_for_each_safe(popup, popup_tmp, &surface->popups, link) {
@@ -329,7 +330,9 @@ static void layer_surface_role_client_commit(struct wlr_surface *wlr_surface) {
 		return;
 	}
 
-	if (wlr_surface_state_has_buffer(&wlr_surface->pending) && !surface->configured) {
+	bool has_pending_buffer = wlr_surface_state_has_buffer(&wlr_surface->pending);
+
+	if (has_pending_buffer && !surface->configured) {
 		wlr_surface_reject_pending(wlr_surface, surface->resource,
 			ZWLR_LAYER_SHELL_V1_ERROR_ALREADY_CONSTRUCTED,
 			"layer_surface has never been configured");
@@ -355,6 +358,16 @@ static void layer_surface_role_client_commit(struct wlr_surface *wlr_surface) {
 			"height 0 requested without setting top and bottom anchors");
 		return;
 	}
+
+	if (surface->client_mapped && !has_pending_buffer) {
+		layer_surface_reset(surface);
+		surface->pending.initial_commit = false;
+	} else {
+		surface->pending.initial_commit = !surface->initialized;
+		surface->initialized = true;
+	}
+
+	surface->client_mapped = has_pending_buffer;
 }
 
 static void layer_surface_role_commit(struct wlr_surface *wlr_surface) {
@@ -364,15 +377,7 @@ static void layer_surface_role_commit(struct wlr_surface *wlr_surface) {
 		return;
 	}
 
-	if (surface->surface->unmap_commit) {
-		layer_surface_reset(surface);
-
-		assert(!surface->initialized);
-		surface->initial_commit = false;
-	} else {
-		surface->initial_commit = !surface->initialized;
-		surface->initialized = true;
-	}
+	surface->initial_commit = surface->current.initial_commit && surface->initialized;
 
 	if (wlr_surface_has_buffer(wlr_surface)) {
 		wlr_surface_map(wlr_surface);
