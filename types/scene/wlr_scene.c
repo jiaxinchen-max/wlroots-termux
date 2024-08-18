@@ -2113,11 +2113,17 @@ bool wlr_scene_output_build_state(struct wlr_scene_output *scene_output,
 		timer->pre_render_duration = timespec_to_nsec(&duration);
 	}
 
+	struct wlr_color_transform *color_transform = output->color_transform;
+
+	// assert we don't try to apply a color transform if the renderer does not
+	// support a color transform
+	assert(output->renderer->features.output_color_transform || !color_transform);
+
 	scene_output->in_point++;
 	struct wlr_render_pass *render_pass = wlr_renderer_begin_buffer_pass(output->renderer, buffer,
 			&(struct wlr_buffer_pass_options){
 		.timer = timer ? timer->render_timer : NULL,
-		.color_transform = options->color_transform,
+		.color_transform = color_transform,
 		.signal_timeline = scene_output->in_timeline,
 		.signal_point = scene_output->in_point,
 	});
