@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <wlr/backend.h>
+#include <wlr/render/color.h>
 #include <wlr/render/swapchain.h>
 #include <wlr/render/drm_syncobj.h>
 #include <wlr/render/wlr_renderer.h>
@@ -1449,8 +1450,41 @@ static void scene_handle_gamma_control_manager_v1_set_gamma(struct wl_listener *
 		return;
 	}
 
-	output->gamma_lut_changed = true;
-	output->gamma_lut = event->control;
+	bool software_gamma = wlr_output_get_gamma_size(output->output) == 0;
+	if (software_gamma) {
+		if (!output->output->renderer->features.output_color_transform) {
+			wlr_gamma_control_v1_send_failed_and_destroy(event->control);
+			return;
+		}
+
+		struct wlr_color_transform *color_transform = NULL;
+		if (event->control && event->control->table) {
+			size_t ramp_size = event->control->ramp_size;
+			const uint16_t *r = event->control->table;
+			const uint16_t *g = event->control->table + ramp_size;
+			const uint16_t *b = event->control->table + 2 * ramp_size;
+
+			color_transform = wlr_color_transform_create_from_gamma_lut(ramp_size, r, g, b);
+			if (!color_transform) {
+				wlr_gamma_control_v1_send_failed_and_destroy(event->control);
+				return;
+			}
+		}
+
+		scene_output_damage_whole(output);
+		wlr_color_transform_unref(output->gamma_color_transform);
+		output->gamma_color_transform = color_transform;
+
+		wlr_color_transform_unref(output->composed_color_transform);
+		output->composed_color_transform = NULL;
+
+		wlr_color_transform_unref(output->last_used_color_transform);
+		output->last_used_color_transform = NULL;
+	} else {
+		output->gamma_lut_changed = true;
+		output->gamma_lut = event->control;
+	}
+
 	wlr_output_schedule_frame(output->output);
 }
 
@@ -1662,6 +1696,9 @@ void wlr_scene_output_destroy(struct wlr_scene_output *scene_output) {
 	wl_list_remove(&scene_output->output_damage.link);
 	wl_list_remove(&scene_output->output_needs_frame.link);
 	wlr_drm_syncobj_timeline_unref(scene_output->in_timeline);
+	wlr_color_transform_unref(scene_output->gamma_color_transform);
+	wlr_color_transform_unref(scene_output->composed_color_transform);
+	wlr_color_transform_unref(scene_output->last_used_color_transform);
 	wl_array_release(&scene_output->render_list);
 	free(scene_output);
 }
@@ -2067,6 +2104,7 @@ bool wlr_scene_output_build_state(struct wlr_scene_output *scene_output,
 	// - There are no color transforms that need to be applied
 	// - Damage highlight debugging is not enabled
 	bool scanout = options->color_transform == NULL &&
+		scene_output->gamma_color_transform == NULL &&
 		list_len == 1 && debug_damage != WLR_SCENE_DEBUG_DAMAGE_HIGHLIGHT &&
 		scene_entry_try_direct_scanout(&list_data[0], state, &render_data);
 
@@ -2113,7 +2151,30 @@ bool wlr_scene_output_build_state(struct wlr_scene_output *scene_output,
 		timer->pre_render_duration = timespec_to_nsec(&duration);
 	}
 
-	struct wlr_color_transform *color_transform = output->color_transform;
+	struct wlr_color_transform *color_transform = scene_output->composed_color_transform;
+	if (!scene_output->gamma_color_transform) {
+		color_transform = options->color_transform;
+	} else if (!scene_output->composed_color_transform ||
+			scene_output->last_used_color_transform != options->color_transform){
+		if (!options->color_transform) {
+			color_transform = wlr_color_transform_init_srgb();
+		} else {
+			wlr_color_transform_ref(options->color_transform);
+			color_transform = options->color_transform;
+		}
+
+		wlr_color_transform_unref(scene_output->composed_color_transform);
+		scene_output->composed_color_transform =
+			wlr_color_transform_compose(color_transform, scene_output->gamma_color_transform);
+		wlr_color_transform_unref(color_transform);
+		color_transform = scene_output->composed_color_transform;
+
+		wlr_color_transform_unref(scene_output->last_used_color_transform);
+		scene_output->last_used_color_transform = options->color_transform;
+		if (options->color_transform) {
+			wlr_color_transform_ref(options->color_transform);
+		}
+	}
 
 	// assert we don't try to apply a color transform if the renderer does not
 	// support a color transform
