@@ -92,28 +92,29 @@ static void warp_to_touch(struct sample_state *state,
 	wlr_cursor_warp_absolute(state->cursor, dev, x, y);
 }
 
-static void output_frame_notify(struct wl_listener *listener, void *data) {
-	struct sample_output *sample_output = wl_container_of(listener, sample_output, frame);
-	struct sample_state *state = sample_output->state;
-	struct wlr_output *wlr_output = sample_output->output;
-	struct wlr_renderer *renderer = state->renderer;
-	assert(renderer);
-
-	struct wlr_output_state output_state;
-	wlr_output_state_init(&output_state);
-	struct wlr_render_pass *pass = wlr_output_begin_render_pass(wlr_output, &output_state, NULL);
+static void render(struct sample_output *output, struct wlr_output_state *state) {
+	struct wlr_output *wlr_output = output->output;
+	struct sample_state *sample_state = output->state;
+	struct wlr_render_pass *pass = wlr_output_begin_render_pass(wlr_output, state, NULL);
 	wlr_render_pass_add_rect(pass, &(struct wlr_render_rect_options){
-		.box = { .width = wlr_output->width, .height = wlr_output->height },
 		.color = {
-			state->clear_color[0],
-			state->clear_color[1],
-			state->clear_color[2],
-			state->clear_color[3],
+			sample_state->clear_color[0],
+			sample_state->clear_color[1],
+			sample_state->clear_color[2],
+			sample_state->clear_color[3],
 		},
 	});
 	wlr_output_add_software_cursors_to_render_pass(wlr_output, pass, NULL);
 	wlr_render_pass_submit(pass);
-	wlr_output_commit_state(wlr_output, &output_state);
+}
+
+static void output_frame_notify(struct wl_listener *listener, void *data) {
+	struct sample_output *sample_output = wl_container_of(listener, sample_output, frame);
+
+	struct wlr_output_state output_state;
+	wlr_output_state_init(&output_state);
+	render(sample_output, &output_state);
+	wlr_output_commit_state(sample_output->output, &output_state);
 	wlr_output_state_finish(&output_state);
 }
 
@@ -280,6 +281,7 @@ static void new_output_notify(struct wl_listener *listener, void *data) {
 	if (mode != NULL) {
 		wlr_output_state_set_mode(&state, mode);
 	}
+	render(sample_output, &state);
 	wlr_output_commit_state(output, &state);
 	wlr_output_state_finish(&state);
 }

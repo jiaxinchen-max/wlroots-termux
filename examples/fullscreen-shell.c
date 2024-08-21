@@ -79,18 +79,13 @@ static void render_surface(struct wlr_surface *surface,
 	wlr_surface_send_frame_done(surface, rdata->when);
 }
 
-static void output_handle_frame(struct wl_listener *listener, void *data) {
-	struct fullscreen_output *output =
-		wl_container_of(listener, output, frame);
-
+static void render(struct fullscreen_output *output, struct wlr_output_state *state) {
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	int width, height;
-	wlr_output_effective_resolution(output->wlr_output, NULL, &width, &height);
+	wlr_output_effective_resolution(output->wlr_output, state, &width, &height);
 
-	struct wlr_output_state state;
-	wlr_output_state_init(&state);
-	struct wlr_render_pass *pass = wlr_output_begin_render_pass(output->wlr_output, &state, NULL);
+	struct wlr_render_pass *pass = wlr_output_begin_render_pass(output->wlr_output, state, NULL);
 	if (pass == NULL) {
 		return;
 	}
@@ -110,6 +105,15 @@ static void output_handle_frame(struct wl_listener *listener, void *data) {
 	}
 
 	wlr_render_pass_submit(pass);
+}
+
+static void output_handle_frame(struct wl_listener *listener, void *data) {
+	struct fullscreen_output *output =
+		wl_container_of(listener, output, frame);
+
+	struct wlr_output_state state;
+	wlr_output_state_init(&state);
+	render(output, &state);
 	wlr_output_commit_state(output->wlr_output, &state);
 	wlr_output_state_finish(&state);
 }
@@ -169,6 +173,7 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 	if (mode != NULL) {
 		wlr_output_state_set_mode(&state, mode);
 	}
+	render(output, &state);
 	wlr_output_commit_state(wlr_output, &state);
 	wlr_output_state_finish(&state);
 }

@@ -39,11 +39,25 @@ struct sample_keyboard {
 	struct wl_listener destroy;
 };
 
+static void render(struct sample_output *output, struct wlr_output_state *state) {
+	struct wlr_output *wlr_output = output->output;
+	struct wlr_render_pass *pass = wlr_output_begin_render_pass(wlr_output, state, NULL);
+	wlr_render_pass_add_rect(pass, &(struct wlr_render_rect_options){
+		.box = { .width = wlr_output->width, .height = wlr_output->height },
+		.color = {
+			.r = output->sample->color[0],
+			.g = output->sample->color[1],
+			.b = output->sample->color[2],
+			.a = output->sample->color[3],
+		},
+	});
+	wlr_render_pass_submit(pass);
+}
+
 static void output_frame_notify(struct wl_listener *listener, void *data) {
 	struct sample_output *sample_output =
 		wl_container_of(listener, sample_output, frame);
 	struct sample_state *sample = sample_output->sample;
-	struct wlr_output *wlr_output = sample_output->output;
 
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
@@ -63,19 +77,8 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
 
 	struct wlr_output_state state;
 	wlr_output_state_init(&state);
-	struct wlr_render_pass *pass = wlr_output_begin_render_pass(wlr_output, &state, NULL);
-	wlr_render_pass_add_rect(pass, &(struct wlr_render_rect_options){
-		.box = { .width = wlr_output->width, .height = wlr_output->height },
-		.color = {
-			.r = sample->color[0],
-			.g = sample->color[1],
-			.b = sample->color[2],
-			.a = sample->color[3],
-		},
-	});
-	wlr_render_pass_submit(pass);
-
-	wlr_output_commit_state(wlr_output, &state);
+	render(sample_output, &state);
+	wlr_output_commit_state(sample_output->output, &state);
 	wlr_output_state_finish(&state);
 	sample->last_frame = now;
 }
@@ -111,6 +114,7 @@ static void new_output_notify(struct wl_listener *listener, void *data) {
 	if (mode != NULL) {
 		wlr_output_state_set_mode(&state, mode);
 	}
+	render(sample_output, &state);
 	wlr_output_commit_state(output, &state);
 	wlr_output_state_finish(&state);
 }

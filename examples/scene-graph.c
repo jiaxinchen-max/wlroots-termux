@@ -86,6 +86,7 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 	if (mode != NULL) {
 		wlr_output_state_set_mode(&state, mode);
 	}
+	wlr_scene_output_build_state(output->scene_output, &state, NULL);
 	wlr_output_commit_state(wlr_output, &state);
 	wlr_output_state_finish(&state);
 
