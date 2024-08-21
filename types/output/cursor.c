@@ -78,8 +78,9 @@ static void output_cursor_get_box(struct wlr_output_cursor *cursor,
 
 void wlr_output_add_software_cursors_to_render_pass(struct wlr_output *output,
 		struct wlr_render_pass *render_pass, const pixman_region32_t *damage) {
+	// TODO: pass output state from caller
 	int width, height;
-	wlr_output_transformed_resolution(output, &width, &height);
+	wlr_output_transformed_resolution(output, NULL, &width, &height);
 
 	struct wlr_output_cursor *cursor;
 	wl_list_for_each(cursor, &output->cursors, link) {
@@ -147,7 +148,7 @@ static void output_cursor_reset(struct wlr_output_cursor *cursor) {
 static void output_cursor_update_visible(struct wlr_output_cursor *cursor) {
 	struct wlr_box output_box;
 	output_box.x = output_box.y = 0;
-	wlr_output_transformed_resolution(cursor->output, &output_box.width,
+	wlr_output_transformed_resolution(cursor->output, NULL, &output_box.width,
 		&output_box.height);
 
 	struct wlr_box cursor_box;

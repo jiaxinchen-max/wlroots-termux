@@ -427,19 +427,24 @@ void wlr_output_destroy(struct wlr_output *output) {
 }
 
 void wlr_output_transformed_resolution(struct wlr_output *output,
-		int *width, int *height) {
-	if (output->transform % 2 == 0) {
-		*width = output->width;
-		*height = output->height;
-	} else {
-		*width = output->height;
-		*height = output->width;
+		const struct wlr_output_state *state, int *width, int *height) {
+	output_pending_resolution(output, state, width, height);
+
+	enum wl_output_transform transform = output->transform;
+	if (state && state->committed & WLR_OUTPUT_STATE_TRANSFORM) {
+		transform = state->transform;
+	}
+
+	if (transform % 2 != 0) {
+		int tmp = *width;
+		*width = *height;
+		*height = tmp;
 	}
 }
 
 void wlr_output_effective_resolution(struct wlr_output *output,
 		int *width, int *height) {
-	wlr_output_transformed_resolution(output, width, height);
+	wlr_output_transformed_resolution(output, NULL, width, height);
 	*width /= output->scale;
 	*height /= output->scale;
 }
@@ -462,7 +467,7 @@ struct wlr_output_mode *wlr_output_preferred_mode(struct wlr_output *output) {
 
 void output_pending_resolution(struct wlr_output *output,
 		const struct wlr_output_state *state, int *width, int *height) {
-	if (state->committed & WLR_OUTPUT_STATE_MODE) {
+	if (state && state->committed & WLR_OUTPUT_STATE_MODE) {
 		switch (state->mode_type) {
 		case WLR_OUTPUT_STATE_MODE_FIXED:
 			*width = state->mode->width;
