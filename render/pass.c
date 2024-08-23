@@ -16,13 +16,21 @@ bool wlr_render_pass_submit(struct wlr_render_pass *render_pass) {
 
 void wlr_render_pass_add_texture(struct wlr_render_pass *render_pass,
 		const struct wlr_render_texture_options *options) {
+	bool is_src_box_empty = true;
 	// make sure the texture source box does not try and sample outside of the
 	// texture
 	if (!wlr_fbox_empty(&options->src_box)) {
+		is_src_box_empty = false;
 		const struct wlr_fbox *box = &options->src_box;
 		assert(box->x >= 0 && box->y >= 0 &&
 			box->x + box->width <= options->texture->width &&
 			box->y + box->height <= options->texture->height);
+	}
+
+	if ((wlr_render_texture_options_get_alpha(options) <= 0 &&
+			WLR_RENDER_BLEND_MODE_PREMULTIPLIED == options->blend_mode) ||
+			wlr_box_empty(&options->dst_box) || is_src_box_empty) {
+		return;
 	}
 
 	render_pass->impl->add_texture(render_pass, options);
@@ -31,6 +39,12 @@ void wlr_render_pass_add_texture(struct wlr_render_pass *render_pass,
 void wlr_render_pass_add_rect(struct wlr_render_pass *render_pass,
 		const struct wlr_render_rect_options *options) {
 	assert(options->box.width >= 0 && options->box.height >= 0);
+	if ((options->color.a <= 0 &&
+			WLR_RENDER_BLEND_MODE_PREMULTIPLIED == options->blend_mode) ||
+			wlr_box_empty(&options->box)) {
+		return;
+	}
+
 	render_pass->impl->add_rect(render_pass, options);
 }
 
