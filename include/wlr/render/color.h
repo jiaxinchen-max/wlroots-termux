@@ -59,4 +59,15 @@ void wlr_color_transform_unref(struct wlr_color_transform *tr);
 struct wlr_color_transform *wlr_color_transform_create_from_gamma_lut(
 	size_t ramp_size, const uint16_t *r, const uint16_t *g, const uint16_t *b);
 
+/**
+ * Composes two color transforms. This allows compositing multiple color transforms
+ * over each other to produce one instead of needing to sample from all color
+ * transforms.
+ *
+ * Note that when compositing a 3d lut transform with an SRGB transform, the result
+ * will be lossy as 3d lut cannot losslessly encode SRGB.
+ */
+struct wlr_color_transform *wlr_color_transform_compose(
+	const struct wlr_color_transform *a, const struct wlr_color_transform *b);
+
 #endif
