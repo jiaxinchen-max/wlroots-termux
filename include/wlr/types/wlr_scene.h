@@ -102,11 +102,16 @@ struct wlr_scene {
 	// May be NULL
 	struct wlr_linux_dmabuf_v1 *linux_dmabuf_v1;
 	struct wlr_gamma_control_manager_v1 *gamma_control_manager_v1;
+	struct wlr_fifo_manager_v1 *fifo_manager_v1;
 
 	struct {
 		struct wl_listener linux_dmabuf_v1_destroy;
 		struct wl_listener gamma_control_manager_v1_destroy;
 		struct wl_listener gamma_control_manager_v1_set_gamma;
+		struct wl_listener fifo_manager_v1_destroy;
+		struct wl_listener fifo_manager_v1_fifo_destroy;
+		struct wl_listener fifo_manager_v1_new_fifo;
+		struct wl_listener fifo_manager_v1_fifo_barrier;
 
 		enum wlr_scene_debug_damage_option debug_damage_option;
 		bool direct_scanout;
@@ -125,6 +130,9 @@ struct wlr_scene_surface {
 
 		struct wlr_addon addon;
 
+		struct wlr_fifo_v1 *fifo_v1;
+		bool fifo_barrier;
+
 		struct wl_listener outputs_update;
 		struct wl_listener output_enter;
 		struct wl_listener output_leave;
@@ -132,6 +140,7 @@ struct wlr_scene_surface {
 		struct wl_listener frame_done;
 		struct wl_listener surface_destroy;
 		struct wl_listener surface_commit;
+		struct wl_listener fifo_destroy;
 	} WLR_PRIVATE;
 };
 
@@ -341,6 +350,12 @@ void wlr_scene_set_linux_dmabuf_v1(struct wlr_scene *scene,
  */
 void wlr_scene_set_gamma_control_manager_v1(struct wlr_scene *scene,
 	struct wlr_gamma_control_manager_v1 *gamma_control);
+
+/**
+ * Handles fifo_v1 for all surfaces and their primary outputs in the scene.
+ */
+void wlr_scene_set_fifo_manager_v1(struct wlr_scene *scene,
+	    struct wlr_fifo_manager_v1 *fifo_manager);
 
 /**
  * Add a node displaying nothing but its children.
