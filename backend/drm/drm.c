@@ -602,9 +602,6 @@ static void drm_connector_rollback_commit(const struct wlr_drm_connector_state *
 static bool drm_commit(struct wlr_drm_backend *drm,
 		const struct wlr_drm_device_state *state,
 		uint32_t flags, bool test_only) {
-	// Disallow atomic-only flags
-	assert((flags & ~DRM_MODE_PAGE_FLIP_FLAGS) == 0);
-
 	struct wlr_drm_page_flip *page_flip = NULL;
 	if (flags & DRM_MODE_PAGE_FLIP_EVENT) {
 		page_flip = drm_page_flip_create(drm, state);
@@ -1962,6 +1959,7 @@ bool commit_drm_device(struct wlr_drm_backend *drm,
 	bool ok = false;
 	bool modeset = false;
 	size_t conn_states_len = 0;
+	bool nonblock = drm->iface == &atomic_iface;
 	for (size_t i = 0; i < output_states_len; i++) {
 		const struct wlr_backend_output_state *output_state = &output_states[i];
 		struct wlr_output *output = output_state->output;
@@ -1972,6 +1970,9 @@ bool commit_drm_device(struct wlr_drm_backend *drm,
 		}
 
 		struct wlr_drm_connector *conn = get_drm_connector_from_output(output);
+		if (!test_only && conn->pending_page_flip != NULL) {
+			nonblock = false;
+		}
 
 		if (output_pending_enabled(output, &output_state->base) && !drm_connector_alloc_crtc(conn)) {
 			wlr_drm_conn_log(conn, WLR_DEBUG,
@@ -2005,6 +2006,9 @@ bool commit_drm_device(struct wlr_drm_backend *drm,
 	uint32_t flags = 0;
 	if (!test_only) {
 		flags |= DRM_MODE_PAGE_FLIP_EVENT;
+	}
+	if (nonblock) {
+		flags |= DRM_MODE_ATOMIC_NONBLOCK;
 	}
 	struct wlr_drm_device_state dev_state = {
 		.modeset = modeset,
