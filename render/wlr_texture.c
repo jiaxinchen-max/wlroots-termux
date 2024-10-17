@@ -116,7 +116,11 @@ struct wlr_texture *wlr_texture_from_buffer(struct wlr_renderer *renderer,
 	if (!renderer->impl->texture_from_buffer) {
 		return NULL;
 	}
-	return renderer->impl->texture_from_buffer(renderer, buffer);
+	struct wlr_texture *texture =
+		renderer->impl->texture_from_buffer(renderer, buffer);
+	texture->is_spb =
+		wlr_single_pixel_buffer_color_from_buffer(buffer, texture->spb_color);
+	return texture;
 }
 
 bool wlr_texture_update_from_buffer(struct wlr_texture *texture,
@@ -133,5 +137,10 @@ bool wlr_texture_update_from_buffer(struct wlr_texture *texture,
 			extents->y2 > buffer->height) {
 		return false;
 	}
-	return texture->impl->update_from_buffer(texture, buffer, damage);
+	bool result = texture->impl->update_from_buffer(texture, buffer, damage);
+	if (result) {
+		texture->is_spb =
+			wlr_single_pixel_buffer_color_from_buffer(buffer, texture->spb_color);
+	}
+	return result;
 }

@@ -1381,6 +1381,23 @@ static void scene_entry_render(struct render_list_entry *entry, const struct ren
 			break;
 		}
 
+		// Check if the buffer is an SPB which we can render as a rect
+		if (texture->is_spb) {
+			// Render the SPB as a rect, this is likely to be more efficient
+			wlr_render_pass_add_rect(data->render_pass, &(struct wlr_render_rect_options){
+				.box = dst_box,
+				.color = {
+					.r = (float)texture->spb_color[0] / (float)UINT32_MAX,
+					.g = (float)texture->spb_color[1] / (float)UINT32_MAX,
+					.b = (float)texture->spb_color[2] / (float)UINT32_MAX,
+					.a = (float)texture->spb_color[3] / (float)UINT32_MAX * scene_buffer->opacity,
+				},
+				.clip = &render_region,
+			});
+			break;
+		}
+
+
 		enum wl_output_transform transform =
 			wlr_output_transform_invert(scene_buffer->transform);
 		transform = wlr_output_transform_compose(transform, data->transform);
@@ -1717,6 +1734,7 @@ static bool scene_node_invisible(struct wlr_scene_node *node) {
 struct render_list_constructor_data {
 	struct wlr_box box;
 	struct wl_array *render_list;
+	struct wlr_renderer *renderer;
 	bool calculate_visibility;
 	bool highlight_transparent_region;
 	bool fractional_scale;
@@ -1741,6 +1759,24 @@ static bool construct_render_list_iterator(struct wlr_scene_node *node,
 
 		if (memcmp(rect->color, black, sizeof(float) * 4) == 0) {
 			return false;
+		}
+	}
+
+	// If the buffer is a black opaque single pixel buffer then do the same special case
+	if (node->type == WLR_SCENE_NODE_BUFFER && data->calculate_visibility &&
+			(!data->fractional_scale || data->render_list->size == 0)) {
+		struct wlr_scene_buffer *scene_buffer = wlr_scene_buffer_from_node(node);
+		struct wlr_texture *texture = scene_buffer_get_texture(scene_buffer, data->renderer);
+
+		if (texture->is_spb && scene_buffer->opacity == 1.0) {
+			bool is_black_opaque =
+				texture->spb_color[0] == 0 &&
+				texture->spb_color[1] == 0 &&
+				texture->spb_color[2] == 0 &&
+				texture->spb_color[3] == UINT32_MAX;
+			if (is_black_opaque) {
+				return false;
+			}
 		}
 	}
 
@@ -2010,6 +2046,7 @@ bool wlr_scene_output_build_state(struct wlr_scene_output *scene_output,
 	struct render_list_constructor_data list_con = {
 		.box = render_data.logical,
 		.render_list = &scene_output->render_list,
+		.renderer = output->renderer,
 		.calculate_visibility = scene_output->scene->calculate_visibility,
 		.highlight_transparent_region = scene_output->scene->highlight_transparent_region,
 		.fractional_scale = floor(render_data.scale) != render_data.scale,

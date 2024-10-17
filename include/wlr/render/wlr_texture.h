@@ -23,6 +23,11 @@ struct wlr_texture {
 	const struct wlr_texture_impl *impl;
 	uint32_t width, height;
 
+	// Is this actually a single-pixel-buffer being used to draw a solid-color
+	// rectangle.  Color is stored as {R,G,B,A} with UINT32_MAX being full-scale.
+	bool is_spb;
+	uint32_t spb_color[4];
+
 	struct wlr_renderer *renderer;
 };
 
