@@ -29,9 +29,34 @@ void wlr_damage_ring_finish(struct wlr_damage_ring *ring) {
 	}
 }
 
+bool wlr_damage_ring_contains_region(struct wlr_damage_ring *ring,
+		const pixman_region32_t *region) {
+	pixman_region32_t intersection;
+	pixman_region32_init(&intersection);
+	pixman_region32_intersect(&intersection, &ring->current, region);
+	bool is_contained = pixman_region32_equal(&intersection, region);
+	pixman_region32_fini(&intersection);
+
+	return is_contained;
+}
+
 void wlr_damage_ring_add(struct wlr_damage_ring *ring,
 		const pixman_region32_t *damage) {
 	pixman_region32_union(&ring->current, &ring->current, damage);
+}
+
+bool wlr_damage_ring_contains_box(struct wlr_damage_ring *ring,
+		const struct wlr_box *box) {
+	pixman_box32_t pixman_box = {
+		.x1 = box->x,
+		.y1 = box->y,
+		.x2 = box->x + box->width,
+		.y2 = box->y + box->height,
+	};
+
+	pixman_region_overlap_t result = pixman_region32_contains_rectangle(&ring->current, &pixman_box);
+
+	return result == PIXMAN_REGION_IN;
 }
 
 void wlr_damage_ring_add_box(struct wlr_damage_ring *ring,

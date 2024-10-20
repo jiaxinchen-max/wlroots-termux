@@ -11,7 +11,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdint.h>
+#include <stdbool.h>
 #include <pixman.h>
 #include <wayland-server-core.h>
 
@@ -40,11 +40,39 @@ void wlr_damage_ring_init(struct wlr_damage_ring *ring);
 void wlr_damage_ring_finish(struct wlr_damage_ring *ring);
 
 /**
+ * Check if the damage ring fully contains the given region in buffer-local
+ * coordinates. If the region extends outside the current damage, the function
+ * will return false.
+ *
+ * The region should be provided in buffer-local coordinate space and represent
+ * the area that needs to be checked against the current damage tracked by the
+ * ring.
+ *
+ * Returns true if the damage ring fully contains the specified region.
+ */
+bool wlr_damage_ring_contains_region(struct wlr_damage_ring *ring,
+	const pixman_region32_t *region);
+
+/**
  * Add a region to the current damage. The region must be in the buffer-local
  * coordinate space.
  */
 void wlr_damage_ring_add(struct wlr_damage_ring *ring,
 	const pixman_region32_t *damage);
+
+/**
+ * Check if the damage ring fully contains the given box in buffer-local
+ * coordinates. If the box extends outside the current damage, the function
+ * will return false.
+ *
+ * The box must be provided in buffer-local coordinate space and represent the
+ * rectangular area that needs to be checked against the current damage tracked
+ * by the ring.
+ *
+ * Returns true if the damage ring fully contains the specified box.
+ */
+bool wlr_damage_ring_contains_box(struct wlr_damage_ring *ring,
+	const struct wlr_box *box);
 
 /**
  * Add a box to the current damage. The box must be in the buffer-local
