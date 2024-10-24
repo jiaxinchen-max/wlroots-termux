@@ -226,6 +226,7 @@ struct wlr_scene_output {
 
 	bool gamma_lut_changed;
 	struct wlr_gamma_control_v1 *gamma_lut;
+	struct wlr_color_transform *gamma_color_transform;
 
 	struct wl_listener output_commit;
 	struct wl_listener output_damage;
@@ -237,6 +238,9 @@ struct wlr_scene_output {
 
 	struct wlr_drm_syncobj_timeline *in_timeline;
 	uint64_t in_point;
+
+	struct wlr_color_transform *last_used_color_transform;
+	struct wlr_color_transform *composed_color_transform;
 };
 
 struct wlr_scene_timer {

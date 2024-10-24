@@ -157,8 +157,10 @@ static void gamma_control_manager_get_gamma_control(struct wl_client *client,
 
 	size_t gamma_size = wlr_output_get_gamma_size(output);
 	if (gamma_size == 0) {
-		zwlr_gamma_control_v1_send_failed(resource);
-		return;
+		gamma_size = 16;
+
+		//zwlr_gamma_control_v1_send_failed(resource);
+		//return;
 	}
 
 	if (wlr_gamma_control_manager_v1_get_control(manager, output) != NULL) {
