@@ -7,7 +7,6 @@
 #include <wlr/render/swapchain.h>
 #include <wlr/util/log.h>
 #include <xf86drm.h>
-#include "backend/backend.h"
 #include "render/drm_format_set.h"
 #include "render/wlr_renderer.h"
 #include "render/pixel_format.h"
@@ -17,14 +16,11 @@ bool wlr_output_init_render(struct wlr_output *output,
 		struct wlr_allocator *allocator, struct wlr_renderer *renderer) {
 	assert(allocator != NULL && renderer != NULL);
 
-	uint32_t backend_caps = backend_get_buffer_caps(output->backend);
-	uint32_t renderer_caps = renderer->render_buffer_caps;
-
-	if (!(backend_caps & allocator->buffer_caps)) {
+	if (!(output->backend->buffer_caps & allocator->buffer_caps)) {
 		wlr_log(WLR_ERROR, "output backend and allocator buffer capabilities "
 			"don't match");
 		return false;
-	} else if (!(renderer_caps & allocator->buffer_caps)) {
+	} else if (!(renderer->render_buffer_caps & allocator->buffer_caps)) {
 		wlr_log(WLR_ERROR, "renderer and allocator buffer capabilities "
 			"don't match");
 		return false;

@@ -212,17 +212,10 @@ static int backend_get_drm_fd(struct wlr_backend *backend) {
 	return x11->drm_fd;
 }
 
-static uint32_t get_buffer_caps(struct wlr_backend *backend) {
-	struct wlr_x11_backend *x11 = get_x11_backend_from_backend(backend);
-	return (x11->have_dri3 ? WLR_BUFFER_CAP_DMABUF : 0)
-		| (x11->have_shm ? WLR_BUFFER_CAP_SHM : 0);
-}
-
 static const struct wlr_backend_impl backend_impl = {
 	.start = backend_start,
 	.destroy = backend_destroy,
 	.get_drm_fd = backend_get_drm_fd,
-	.get_buffer_caps = get_buffer_caps,
 };
 
 bool wlr_backend_is_x11(struct wlr_backend *backend) {
@@ -572,6 +565,13 @@ struct wlr_backend *wlr_x11_backend_create(struct wl_event_loop *loop,
 		goto error_display;
 	}
 	free(xi_reply);
+
+	if (x11->have_dri3) {
+		x11->backend.buffer_caps |= WLR_BUFFER_CAP_DMABUF;
+	}
+	if (x11->have_shm) {
+		x11->backend.buffer_caps |= WLR_BUFFER_CAP_SHM;
+	}
 
 	int fd = xcb_get_file_descriptor(x11->xcb);
 	uint32_t events = WL_EVENT_READABLE | WL_EVENT_ERROR | WL_EVENT_HANGUP;

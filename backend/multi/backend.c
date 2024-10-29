@@ -6,7 +6,6 @@
 #include <wlr/types/wlr_buffer.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/util/log.h>
-#include "backend/backend.h"
 #include "backend/multi.h"
 
 struct subbackend_state {
@@ -76,28 +75,6 @@ static int multi_backend_get_drm_fd(struct wlr_backend *backend) {
 	return -1;
 }
 
-static uint32_t multi_backend_get_buffer_caps(struct wlr_backend *backend) {
-	struct wlr_multi_backend *multi = multi_backend_from_backend(backend);
-
-	if (wl_list_empty(&multi->backends)) {
-		return 0;
-	}
-
-	uint32_t caps = WLR_BUFFER_CAP_DATA_PTR | WLR_BUFFER_CAP_DMABUF
-			| WLR_BUFFER_CAP_SHM;
-
-	struct subbackend_state *sub;
-	wl_list_for_each(sub, &multi->backends, link) {
-		uint32_t backend_caps = backend_get_buffer_caps(sub->backend);
-		if (backend_caps != 0) {
-			// only count backend capable of presenting a buffer
-			caps = caps & backend_caps;
-		}
-	}
-
-	return caps;
-}
-
 static int compare_output_state_backend(const void *data_a, const void *data_b) {
 	const struct wlr_backend_output_state *a = data_a;
 	const struct wlr_backend_output_state *b = data_b;
@@ -164,7 +141,6 @@ static const struct wlr_backend_impl backend_impl = {
 	.start = multi_backend_start,
 	.destroy = multi_backend_destroy,
 	.get_drm_fd = multi_backend_get_drm_fd,
-	.get_buffer_caps = multi_backend_get_buffer_caps,
 	.test = multi_backend_test,
 	.commit = multi_backend_commit,
 };
@@ -228,15 +204,29 @@ static struct subbackend_state *multi_backend_get_subbackend(struct wlr_multi_ba
 }
 
 static void multi_backend_refresh_features(struct wlr_multi_backend *multi) {
+	multi->backend.buffer_caps = 0;
 	multi->backend.features.timeline = true;
 
+	bool has_buffer_cap = false;
+	uint32_t buffer_caps_intersection =
+		WLR_BUFFER_CAP_DATA_PTR | WLR_BUFFER_CAP_DMABUF | WLR_BUFFER_CAP_SHM;
 	struct subbackend_state *sub = NULL;
 	wl_list_for_each(sub, &multi->backends, link) {
+		// Only take into account backends capable of presenting a buffer
+		if (sub->backend->buffer_caps != 0) {
+			has_buffer_cap = true;
+			buffer_caps_intersection &= sub->backend->buffer_caps;
+		}
+
 		// timeline is only applicable to backends that support DMABUFs
-		if (backend_get_buffer_caps(sub->backend) & WLR_BUFFER_CAP_DMABUF) {
+		if (sub->backend->buffer_caps & WLR_BUFFER_CAP_DMABUF) {
 			multi->backend.features.timeline = multi->backend.features.timeline &&
 				sub->backend->features.timeline;
 		}
+	}
+
+	if (has_buffer_cap) {
+		multi->backend.buffer_caps = buffer_caps_intersection;
 	}
 }
 
