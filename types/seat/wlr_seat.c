@@ -11,7 +11,7 @@
 #include "types/wlr_seat.h"
 #include "util/global.h"
 
-#define SEAT_VERSION 9
+#define SEAT_VERSION 10
 
 static void seat_handle_get_pointer(struct wl_client *client,
 		struct wl_resource *seat_resource, uint32_t id) {

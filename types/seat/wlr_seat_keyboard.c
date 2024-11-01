@@ -78,6 +78,12 @@ void wlr_seat_keyboard_send_key(struct wlr_seat *wlr_seat, uint32_t time,
 			continue;
 		}
 
+		int version = wl_resource_get_version(resource);
+		if (state == WL_KEYBOARD_KEY_STATE_REPEATED &&
+			version < WL_KEYBOARD_KEY_STATE_REPEATED_SINCE_VERSION) {
+			continue;
+		}
+
 		wl_keyboard_send_key(resource, serial, time, key, state);
 	}
 }
