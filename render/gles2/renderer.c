@@ -35,6 +35,11 @@ bool wlr_renderer_is_gles2(struct wlr_renderer *wlr_renderer) {
 	return wlr_renderer->impl == &renderer_impl;
 }
 
+bool wlr_renderer_is_gles2_swrast(struct wlr_renderer *wlr_renderer) {
+	struct wlr_gles2_renderer *renderer = gles2_get_renderer(wlr_renderer);
+	return renderer->swrast;
+}
+
 struct wlr_gles2_renderer *gles2_get_renderer(
 		struct wlr_renderer *wlr_renderer) {
 	assert(wlr_renderer_is_gles2(wlr_renderer));
@@ -537,11 +542,19 @@ struct wlr_renderer *wlr_gles2_renderer_create(struct wlr_egl *egl) {
 	renderer->exts_str = exts_str;
 	renderer->drm_fd = -1;
 
+	const char *gl_renderer_str = (const char *)glGetString(GL_RENDERER);
 	wlr_log(WLR_INFO, "Creating GLES2 renderer");
 	wlr_log(WLR_INFO, "Using %s", glGetString(GL_VERSION));
 	wlr_log(WLR_INFO, "GL vendor: %s", glGetString(GL_VENDOR));
-	wlr_log(WLR_INFO, "GL renderer: %s", glGetString(GL_RENDERER));
+	wlr_log(WLR_INFO, "GL renderer: %s", gl_renderer_str);
 	wlr_log(WLR_INFO, "Supported GLES2 extensions: %s", exts_str);
+
+	if (gl_renderer_str && (strstr(gl_renderer_str, "llvmpipe") ||
+			strstr(gl_renderer_str, "softpipe") ||
+			strstr(gl_renderer_str, "Software Rasterizer"))) {
+		renderer->swrast = true;
+		wlr_log(WLR_INFO, "Running on a software rasterizer, expect limited performance.");
+	}
 
 	if (!renderer->egl->exts.EXT_image_dma_buf_import) {
 		wlr_log(WLR_ERROR, "EGL_EXT_image_dma_buf_import not supported");
