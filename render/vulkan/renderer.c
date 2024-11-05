@@ -464,12 +464,21 @@ static void release_command_buffer_resources(struct wlr_vk_command_buffer *cb,
 		wlr_texture_destroy(&texture->wlr_texture);
 	}
 
+	VkDeviceSize cur_size = min_stage_size;
+	struct wl_list *insertion_target = &renderer->stage.buffers;
 	struct wlr_vk_shared_buffer *buf, *buf_tmp;
-	wl_list_for_each_safe(buf, buf_tmp, &cb->stage_buffers, link) {
+	wl_list_for_each_reverse_safe(buf, buf_tmp, &cb->stage_buffers, link) {
 		buf->allocs.size = 0;
 
 		wl_list_remove(&buf->link);
-		wl_list_insert(&renderer->stage.buffers, &buf->link);
+
+		// Sorted insert
+		while (insertion_target->prev != &renderer->stage.buffers && buf->buf_size > cur_size) {
+			insertion_target = insertion_target->prev;
+			struct wlr_vk_shared_buffer *tbuf = wl_container_of(insertion_target, tbuf, link);
+			cur_size = tbuf->buf_size;
+		}
+		wl_list_insert(insertion_target, &buf->link);
 	}
 
 	if (cb->color_transform) {
