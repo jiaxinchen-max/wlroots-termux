@@ -174,4 +174,6 @@ struct wlr_gles2_render_pass *begin_gles2_buffer_pass(struct wlr_gles2_buffer *b
 	struct wlr_egl_context *prev_ctx, struct wlr_gles2_render_timer *timer,
 	struct wlr_drm_syncobj_timeline *signal_timeline, uint64_t signal_point);
 
+const char* framebuffer_status_to_string(GLenum status);
+
 #endif
