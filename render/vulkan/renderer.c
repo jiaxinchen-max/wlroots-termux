@@ -1147,9 +1147,7 @@ static void vulkan_destroy(struct wlr_renderer *wlr_renderer) {
 		vkDestroyImage(dev->dev, renderer->read_pixels_cache.dst_image, NULL);
 	}
 
-	struct wlr_vk_instance *ini = dev->instance;
-	vulkan_device_destroy(dev);
-	vulkan_instance_destroy(ini);
+	vulkan_device_unref(dev);
 	free(renderer);
 }
 
@@ -1431,6 +1429,7 @@ static const struct wlr_renderer_impl renderer_impl = {
 	.get_drm_fd = vulkan_get_drm_fd,
 	.texture_from_buffer = vulkan_texture_from_buffer,
 	.begin_buffer_pass = vulkan_begin_buffer_pass,
+	.get_allocator = vulkan_get_allocator,
 };
 
 // Initializes the VkDescriptorSetLayout and VkPipelineLayout needed
@@ -2426,6 +2425,7 @@ struct wlr_renderer *vulkan_renderer_create_for_device(struct wlr_vk_device *dev
 	}
 
 	renderer->dev = dev;
+	vulkan_device_ref(dev);
 	wlr_renderer_init(&renderer->wlr_renderer, &renderer_impl, WLR_BUFFER_CAP_DMABUF);
 	renderer->wlr_renderer.features.output_color_transform = true;
 	wl_list_init(&renderer->stage.buffers);
@@ -2513,7 +2513,6 @@ struct wlr_renderer *wlr_vk_renderer_create_with_drm_fd(int drm_fd) {
 	dev->drm_fd = vulkan_open_phdev_drm_fd(phdev);
 	if (dev->drm_fd < 0) {
 		vulkan_device_destroy(dev);
-		vulkan_instance_destroy(ini);
 		return NULL;
 	}
 

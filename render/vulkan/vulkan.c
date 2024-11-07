@@ -624,6 +624,9 @@ struct wlr_vk_device *vulkan_device_create(struct wlr_vk_instance *ini,
 	load_device_proc(dev, "vkGetSemaphoreCounterValueKHR",
 		&dev->api.vkGetSemaphoreCounterValueKHR);
 	load_device_proc(dev, "vkQueueSubmit2KHR", &dev->api.vkQueueSubmit2KHR);
+	load_device_proc(dev, "vkGetMemoryFdKHR", &dev->api.vkGetMemoryFdKHR);
+	load_device_proc(dev, "vkGetImageDrmFormatModifierPropertiesEXT",
+			&dev->api.vkGetImageDrmFormatModifierPropertiesEXT);
 
 	if (has_external_semaphore_fd) {
 		load_device_proc(dev, "vkGetSemaphoreFdKHR", &dev->api.vkGetSemaphoreFdKHR);
@@ -654,6 +657,7 @@ void vulkan_device_destroy(struct wlr_vk_device *dev) {
 	if (!dev) {
 		return;
 	}
+	assert(dev->refcnt == 0);
 
 	if (dev->dev) {
 		vkDestroyDevice(dev->dev, NULL);
@@ -671,6 +675,26 @@ void vulkan_device_destroy(struct wlr_vk_device *dev) {
 		vulkan_format_props_finish(&dev->format_props[i]);
 	}
 
+	if (dev->instance) {
+		vulkan_instance_destroy(dev->instance);
+	}
+
 	free(dev->format_props);
 	free(dev);
+}
+
+
+void vulkan_device_ref(struct wlr_vk_device *dev) {
+	assert(dev != NULL);
+	dev->refcnt++;
+}
+
+void vulkan_device_unref(struct wlr_vk_device *dev) {
+	if (!dev) {
+		return;
+	}
+	if (--dev->refcnt > 0) {
+		return;
+	}
+	vulkan_device_destroy(dev);
 }

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <vulkan/vulkan.h>
+#include <wlr/render/allocator.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/render/wlr_texture.h>
 #include <wlr/render/drm_format_set.h>
@@ -55,6 +56,8 @@ struct wlr_vk_device {
 		PFN_vkGetSemaphoreFdKHR vkGetSemaphoreFdKHR;
 		PFN_vkImportSemaphoreFdKHR vkImportSemaphoreFdKHR;
 		PFN_vkQueueSubmit2KHR vkQueueSubmit2KHR;
+		PFN_vkGetMemoryFdKHR vkGetMemoryFdKHR;
+		PFN_vkGetImageDrmFormatModifierPropertiesEXT vkGetImageDrmFormatModifierPropertiesEXT;
 	} api;
 
 	uint32_t format_prop_count;
@@ -62,6 +65,8 @@ struct wlr_vk_device {
 	struct wlr_drm_format_set dmabuf_render_formats;
 	struct wlr_drm_format_set dmabuf_texture_formats;
 	struct wlr_drm_format_set shm_texture_formats;
+
+	int refcnt;
 };
 
 // Tries to find the VkPhysicalDevice for the given drm fd.
@@ -73,6 +78,8 @@ int vulkan_open_phdev_drm_fd(VkPhysicalDevice phdev);
 struct wlr_vk_device *vulkan_device_create(struct wlr_vk_instance *ini,
 	VkPhysicalDevice phdev);
 void vulkan_device_destroy(struct wlr_vk_device *dev);
+void vulkan_device_ref(struct wlr_vk_device *dev);
+void vulkan_device_unref(struct wlr_vk_device *dev);
 
 // Tries to find any memory bit for the given vulkan device that
 // supports the given flags and is set in req_bits (e.g. if memory
@@ -259,6 +266,27 @@ struct wlr_vk_command_buffer {
 };
 
 #define VULKAN_COMMAND_BUFFERS_CAP 64
+
+struct wlr_vk_allocator {
+	struct wlr_allocator wlr_allocator;
+	struct wlr_backend *backend;
+	struct wlr_vk_device *dev;
+
+	int ref_cnt;
+};
+
+struct wlr_vk_buffer {
+	struct wlr_buffer base;
+	struct wlr_vk_allocator *alloc;
+
+	VkImage image;
+	VkDeviceMemory memory;
+
+	struct wlr_dmabuf_attributes dmabuf;
+};
+
+struct wlr_vk_buffer *vulkan_buffer_from_wlr_buffer(struct wlr_buffer *wlr_buf);
+struct wlr_allocator *vulkan_get_allocator(struct wlr_renderer *wlr_renderer);
 
 // Vulkan wlr_renderer implementation on top of a wlr_vk_device.
 struct wlr_vk_renderer {

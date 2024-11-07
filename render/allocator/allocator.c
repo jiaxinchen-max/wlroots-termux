@@ -96,7 +96,10 @@ struct wlr_allocator *allocator_autocreate_with_drm_fd(
 		int drm_fd) {
 	uint32_t renderer_caps = renderer->render_buffer_caps;
 
-	struct wlr_allocator *alloc = NULL;
+	struct wlr_allocator *alloc = wlr_renderer_get_allocator(renderer);
+	if (alloc) {
+		return alloc;
+	}
 
 	uint32_t gbm_caps = WLR_BUFFER_CAP_DMABUF;
 	if ((backend_caps & gbm_caps) && (renderer_caps & gbm_caps)
