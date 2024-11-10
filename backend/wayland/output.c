@@ -239,14 +239,25 @@ static struct wl_buffer *import_dmabuf(struct wlr_wl_backend *wl,
 	zwp_linux_buffer_params_v1_add_listener(params, &dmabuf_listener, &data);
 	zwp_linux_buffer_params_v1_create(params, dmabuf->width, dmabuf->height, dmabuf->format, 0);
 
+	// Wait for the zwp_linux_buffer_params_v1.created (or .failed) event to
+	// arrive. Moving the params object to its own queue, and dispatching
+	// just that queue ensures other random events (like surface configures)
+	// will not be processed.
+	// TODO: this blocks for a full message roundtrip -- can this be improved?
+	struct wl_event_queue *orig_queue = wl_proxy_get_queue((struct wl_proxy *)params);
+	struct wl_event_queue *queue = wl_display_create_queue(wl->remote_display);
+	wl_proxy_set_queue((struct wl_proxy *)params, queue);
 	while (!data.done) {
-		if (wl_display_dispatch(wl->remote_display) < 0) {
+		if (wl_display_dispatch_queue(wl->remote_display, queue) < 0) {
 			wlr_log(WLR_ERROR, "wl_display_dispatch() failed");
 			break;
 		}
 	}
-
+	if (data.wl_buffer) {
+		wl_proxy_set_queue((struct wl_proxy *)data.wl_buffer, orig_queue);
+	}
 	zwp_linux_buffer_params_v1_destroy(params);
+	wl_event_queue_destroy(queue);
 	return data.wl_buffer;
 }
 
