@@ -1235,9 +1235,32 @@ struct wlr_output *wlr_wl_output_create(struct wlr_backend *wlr_backend) {
 	xdg_toplevel_add_listener(output->xdg_toplevel,
 			&xdg_toplevel_listener, output);
 
-	wl_display_flush(backend->remote_display);
+	xdg_toplevel_set_title(output->xdg_toplevel, output->title);
+	xdg_toplevel_set_app_id(output->xdg_toplevel, output->app_id);
+	wl_surface_commit(output->surface);
+
+	// Wait for the initial configure to arrive.
+	output_wait_for_first_configure(output);
+	output->initialized = true;
+
+	// To avoid having listeners commit inside the `wl_display_dispatch_queue()`
+	// and use an incomplete state or unexpectedly recurse, set the state now
+	int32_t req_width = output->wlr_output.width;
+	int32_t req_height = output->wlr_output.height;
+	if (output->requested_width > 0) {
+		req_width = output->requested_width;
+	}
+	if (output->requested_height > 0) {
+		req_height = output->requested_height;
+	}
 
 	output_start(output);
+
+	struct wlr_output_state state;
+	wlr_output_state_init(&state);
+	wlr_output_state_set_custom_mode(&state, req_width, req_height, 0);
+	wlr_output_send_request_state(&output->wlr_output, &state);
+	wlr_output_state_finish(&state);
 
 	// TODO: let the compositor do this bit
 	if (backend->activation_v1 && backend->activation_token) {
