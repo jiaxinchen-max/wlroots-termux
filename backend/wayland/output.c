@@ -37,8 +37,6 @@ static const uint32_t SUPPORTED_OUTPUT_STATE =
 	WLR_OUTPUT_STATE_WAIT_TIMELINE |
 	WLR_OUTPUT_STATE_SIGNAL_TIMELINE;
 
-static size_t last_output_num = 0;
-
 static const char *surface_tag = "wlr_wl_output";
 
 static struct wlr_wl_output *get_wl_output_from_output(
@@ -1089,7 +1087,7 @@ static struct wlr_wl_output *output_create(struct wlr_wl_backend *backend,
 
 	wlr_output->adaptive_sync_status = WLR_OUTPUT_ADAPTIVE_SYNC_ENABLED;
 
-	size_t output_num = ++last_output_num;
+	size_t output_num = wlr_wl_backend_get_output_num(backend);
 
 	char name[64];
 	snprintf(name, sizeof(name), "WL-%zu", output_num);

@@ -23,6 +23,7 @@ struct wlr_wl_backend {
 	bool started;
 	struct wl_event_loop *event_loop;
 	struct wl_list outputs;
+	size_t last_output_num;
 	int drm_fd;
 	struct wl_list buffers; // wlr_wl_buffer.link
 	size_t requested_outputs;
@@ -213,5 +214,7 @@ void destroy_wl_drm_syncobj_timeline(struct wlr_wl_drm_syncobj_timeline *timelin
 extern const struct wlr_pointer_impl wl_pointer_impl;
 extern const struct wlr_tablet_pad_impl wl_tablet_pad_impl;
 extern const struct wlr_tablet_impl wl_tablet_impl;
+
+size_t wlr_wl_backend_get_output_num(struct wlr_wl_backend *wl);
 
 #endif
