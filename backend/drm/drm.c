@@ -1189,6 +1189,8 @@ static void dealloc_crtc(struct wlr_drm_connector *conn);
 static void drm_connector_destroy_output(struct wlr_output *output) {
 	struct wlr_drm_connector *conn = get_drm_connector_from_output(output);
 
+	wlr_output_finish(output);
+
 	dealloc_crtc(conn);
 
 	conn->status = DRM_MODE_DISCONNECTED;

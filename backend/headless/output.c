@@ -80,8 +80,10 @@ static bool output_commit(struct wlr_output *wlr_output,
 }
 
 static void output_destroy(struct wlr_output *wlr_output) {
-	struct wlr_headless_output *output =
-		headless_output_from_output(wlr_output);
+	struct wlr_headless_output *output = headless_output_from_output(wlr_output);
+
+	wlr_output_finish(wlr_output);
+
 	wl_list_remove(&output->link);
 	wl_event_source_remove(output->frame_timer);
 	free(output);
