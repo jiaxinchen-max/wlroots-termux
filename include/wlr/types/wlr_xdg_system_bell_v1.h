@@ -15,6 +15,7 @@ struct wlr_xdg_system_bell_v1 {
 	struct wl_global *global;
 
 	struct {
+		struct wl_signal destroy;
 		struct wl_signal ring; // struct wlr_xdg_system_bell_v1_ring_event
 	} events;
 

@@ -682,6 +682,8 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 			display_destroy);
 	wlr_log(WLR_DEBUG, "Destroying wlr_drm_lease_v1_manager");
 
+	wl_signal_emit_mutable(&manager->events.destroy, NULL);
+
 	struct wlr_drm_lease_device_v1 *device, *tmp;
 	wl_list_for_each_safe(device, tmp, &manager->devices, link) {
 		drm_lease_device_v1_destroy(device);
@@ -718,6 +720,7 @@ struct wlr_drm_lease_v1_manager *wlr_drm_lease_v1_manager_create(
 	manager->display_destroy.notify = handle_display_destroy;
 	wl_display_add_destroy_listener(display, &manager->display_destroy);
 
+	wl_signal_init(&manager->events.destroy);
 	wl_signal_init(&manager->events.request);
 
 	return manager;

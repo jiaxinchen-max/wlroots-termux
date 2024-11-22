@@ -78,6 +78,8 @@ struct wlr_pointer_constraints_v1 {
 	struct wl_list constraints; // wlr_pointer_constraint_v1.link
 
 	struct {
+		struct wl_signal destroy;
+
 		/**
 		 * Called when a new pointer constraint is created.
 		 *

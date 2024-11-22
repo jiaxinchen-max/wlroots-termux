@@ -322,6 +322,7 @@ static void pointer_constraints_bind(struct wl_client *client, void *data,
 static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_pointer_constraints_v1 *pointer_constraints =
 		wl_container_of(listener, pointer_constraints, display_destroy);
+	wl_signal_emit_mutable(&pointer_constraints->events.destroy, NULL);
 	wl_list_remove(&pointer_constraints->display_destroy.link);
 	wl_global_destroy(pointer_constraints->global);
 	free(pointer_constraints);
@@ -345,6 +346,8 @@ struct wlr_pointer_constraints_v1 *wlr_pointer_constraints_v1_create(
 	pointer_constraints->global = wl_global;
 
 	wl_list_init(&pointer_constraints->constraints);
+
+	wl_signal_init(&pointer_constraints->events.destroy);
 	wl_signal_init(&pointer_constraints->events.new_constraint);
 
 	pointer_constraints->display_destroy.notify = handle_display_destroy;
