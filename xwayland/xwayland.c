@@ -81,6 +81,11 @@ void wlr_xwayland_destroy(struct wlr_xwayland *xwayland) {
 
 	wl_signal_emit_mutable(&xwayland->events.destroy, NULL);
 
+	assert(wl_list_empty(&xwayland->events.destroy.listener_list));
+	assert(wl_list_empty(&xwayland->events.new_surface.listener_list));
+	assert(wl_list_empty(&xwayland->events.ready.listener_list));
+	assert(wl_list_empty(&xwayland->events.remove_startup_info.listener_list));
+
 	wl_list_remove(&xwayland->server_destroy.link);
 	wl_list_remove(&xwayland->server_start.link);
 	wl_list_remove(&xwayland->server_ready.link);

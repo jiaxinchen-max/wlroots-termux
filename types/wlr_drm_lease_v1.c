@@ -684,6 +684,9 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 
 	wl_signal_emit_mutable(&manager->events.destroy, NULL);
 
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+	assert(wl_list_empty(&manager->events.request.listener_list));
+
 	struct wlr_drm_lease_device_v1 *device, *tmp;
 	wl_list_for_each_safe(device, tmp, &manager->devices, link) {
 		drm_lease_device_v1_destroy(device);

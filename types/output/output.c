@@ -349,6 +349,7 @@ void wlr_output_init(struct wlr_output *output, struct wlr_backend *backend,
 	wl_list_init(&output->cursors);
 	wl_list_init(&output->layers);
 	wl_list_init(&output->resources);
+
 	wl_signal_init(&output->events.frame);
 	wl_signal_init(&output->events.damage);
 	wl_signal_init(&output->events.needs_frame);
@@ -381,12 +382,22 @@ void wlr_output_destroy(struct wlr_output *output) {
 	}
 
 	wl_signal_emit_mutable(&output->events.destroy, output);
+	wlr_addon_set_finish(&output->addons);
+
+	assert(wl_list_empty(&output->events.frame.listener_list));
+	assert(wl_list_empty(&output->events.damage.listener_list));
+	assert(wl_list_empty(&output->events.needs_frame.listener_list));
+	assert(wl_list_empty(&output->events.precommit.listener_list));
+	assert(wl_list_empty(&output->events.commit.listener_list));
+	assert(wl_list_empty(&output->events.present.listener_list));
+	assert(wl_list_empty(&output->events.bind.listener_list));
+	assert(wl_list_empty(&output->events.description.listener_list));
+	assert(wl_list_empty(&output->events.request_state.listener_list));
+	assert(wl_list_empty(&output->events.destroy.listener_list));
 
 	wlr_output_destroy_global(output);
 
 	wl_list_remove(&output->display_destroy.link);
-
-	wlr_addon_set_finish(&output->addons);
 
 	// The backend is responsible for free-ing the list of modes
 

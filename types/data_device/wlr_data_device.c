@@ -284,6 +284,9 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_data_device_manager *manager =
 		wl_container_of(listener, manager, display_destroy);
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 	wl_global_destroy(manager->global);
 	free(manager);

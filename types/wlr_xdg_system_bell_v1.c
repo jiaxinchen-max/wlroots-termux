@@ -52,6 +52,10 @@ static void bell_bind(struct wl_client *client, void *data,
 static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_xdg_system_bell_v1 *bell = wl_container_of(listener, bell, display_destroy);
 	wl_signal_emit_mutable(&bell->events.destroy, NULL);
+
+	assert(wl_list_empty(&bell->events.destroy.listener_list));
+	assert(wl_list_empty(&bell->events.ring.listener_list));
+
 	wl_list_remove(&bell->display_destroy.link);
 	wl_global_destroy(bell->global);
 	free(bell);

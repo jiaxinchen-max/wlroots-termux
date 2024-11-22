@@ -33,6 +33,11 @@ void wlr_tablet_pad_init(struct wlr_tablet_pad *pad,
 void wlr_tablet_pad_finish(struct wlr_tablet_pad *pad) {
 	wlr_input_device_finish(&pad->base);
 
+	assert(wl_list_empty(&pad->events.button.listener_list));
+	assert(wl_list_empty(&pad->events.ring.listener_list));
+	assert(wl_list_empty(&pad->events.strip.listener_list));
+	assert(wl_list_empty(&pad->events.attach_tablet.listener_list));
+
 	char **path_ptr;
 	wl_array_for_each(path_ptr, &pad->paths) {
 		free(*path_ptr);

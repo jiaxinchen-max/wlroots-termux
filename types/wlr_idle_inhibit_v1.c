@@ -34,6 +34,8 @@ static void idle_inhibitor_v1_destroy(struct wlr_idle_inhibitor_v1 *inhibitor) {
 
 	wl_signal_emit_mutable(&inhibitor->events.destroy, inhibitor->surface);
 
+	assert(wl_list_empty(&inhibitor->events.destroy.listener_list));
+
 	wl_resource_set_user_data(inhibitor->resource, NULL);
 	wl_list_remove(&inhibitor->link);
 	wl_list_remove(&inhibitor->surface_destroy.link);
@@ -87,6 +89,7 @@ static void manager_handle_create_inhibitor(struct wl_client *client,
 
 	inhibitor->resource = inhibitor_resource;
 	inhibitor->surface = surface;
+
 	wl_signal_init(&inhibitor->events.destroy);
 
 	inhibitor->surface_destroy.notify = idle_inhibitor_handle_surface_destroy;
@@ -113,6 +116,10 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_idle_inhibit_manager_v1 *manager =
 		wl_container_of(listener, manager, display_destroy);
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
+	assert(wl_list_empty(&manager->events.new_inhibitor.listener_list));
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 	wl_global_destroy(manager->global);
 	free(manager);
@@ -140,6 +147,7 @@ struct wlr_idle_inhibit_manager_v1 *wlr_idle_inhibit_v1_create(struct wl_display
 	}
 
 	wl_list_init(&manager->inhibitors);
+
 	wl_signal_init(&manager->events.new_inhibitor);
 	wl_signal_init(&manager->events.destroy);
 

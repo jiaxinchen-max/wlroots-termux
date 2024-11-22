@@ -11,6 +11,7 @@ void wlr_primary_selection_source_init(
 		.impl = impl,
 	};
 	wl_array_init(&source->mime_types);
+
 	wl_signal_init(&source->events.destroy);
 }
 
@@ -21,6 +22,8 @@ void wlr_primary_selection_source_destroy(
 	}
 
 	wl_signal_emit_mutable(&source->events.destroy, source);
+
+	assert(wl_list_empty(&source->events.destroy.listener_list));
 
 	char **p;
 	wl_array_for_each(p, &source->mime_types) {

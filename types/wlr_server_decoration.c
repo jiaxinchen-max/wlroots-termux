@@ -36,6 +36,10 @@ static void server_decoration_handle_request_mode(struct wl_client *client,
 static void server_decoration_destroy(
 		struct wlr_server_decoration *decoration) {
 	wl_signal_emit_mutable(&decoration->events.destroy, decoration);
+
+	assert(wl_list_empty(&decoration->events.destroy.listener_list));
+	assert(wl_list_empty(&decoration->events.mode.listener_list));
+
 	wl_list_remove(&decoration->surface_destroy_listener.link);
 	wl_resource_set_user_data(decoration->resource, NULL);
 	wl_list_remove(&decoration->link);
@@ -164,6 +168,10 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_server_decoration_manager *manager =
 		wl_container_of(listener, manager, display_destroy);
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
+	assert(wl_list_empty(&manager->events.new_decoration.listener_list));
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 	wl_global_destroy(manager->global);
 	free(manager);
@@ -185,6 +193,7 @@ struct wlr_server_decoration_manager *wlr_server_decoration_manager_create(
 	manager->default_mode = ORG_KDE_KWIN_SERVER_DECORATION_MANAGER_MODE_NONE;
 	wl_list_init(&manager->resources);
 	wl_list_init(&manager->decorations);
+
 	wl_signal_init(&manager->events.new_decoration);
 	wl_signal_init(&manager->events.destroy);
 

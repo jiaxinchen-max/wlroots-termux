@@ -47,6 +47,9 @@ static void pointer_constraint_destroy(struct wlr_pointer_constraint_v1 *constra
 
 	wl_signal_emit_mutable(&constraint->events.destroy, constraint);
 
+	assert(wl_list_empty(&constraint->events.set_region.listener_list));
+	assert(wl_list_empty(&constraint->events.destroy.listener_list));
+
 	wl_resource_set_user_data(constraint->resource, NULL);
 	wlr_surface_synced_finish(&constraint->synced);
 	wl_list_remove(&constraint->link);
@@ -323,6 +326,10 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_pointer_constraints_v1 *pointer_constraints =
 		wl_container_of(listener, pointer_constraints, display_destroy);
 	wl_signal_emit_mutable(&pointer_constraints->events.destroy, NULL);
+
+	assert(wl_list_empty(&pointer_constraints->events.destroy.listener_list));
+	assert(wl_list_empty(&pointer_constraints->events.new_constraint.listener_list));
+
 	wl_list_remove(&pointer_constraints->display_destroy.link);
 	wl_global_destroy(pointer_constraints->global);
 	free(pointer_constraints);

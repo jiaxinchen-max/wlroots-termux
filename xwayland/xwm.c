@@ -202,6 +202,7 @@ static struct wlr_xwayland_surface *xwayland_surface_create(
 	wl_list_init(&surface->stack_link);
 	wl_list_init(&surface->parent_link);
 	wl_list_init(&surface->unpaired_link);
+
 	wl_signal_init(&surface->events.destroy);
 	wl_signal_init(&surface->events.request_configure);
 	wl_signal_init(&surface->events.request_move);
@@ -534,6 +535,33 @@ static void xwayland_surface_destroy(struct wlr_xwayland_surface *xsurface) {
 	xwayland_surface_dissociate(xsurface);
 
 	wl_signal_emit_mutable(&xsurface->events.destroy, NULL);
+
+	assert(wl_list_empty(&xsurface->events.destroy.listener_list));
+	assert(wl_list_empty(&xsurface->events.request_configure.listener_list));
+	assert(wl_list_empty(&xsurface->events.request_move.listener_list));
+	assert(wl_list_empty(&xsurface->events.request_resize.listener_list));
+	assert(wl_list_empty(&xsurface->events.request_minimize.listener_list));
+	assert(wl_list_empty(&xsurface->events.request_maximize.listener_list));
+	assert(wl_list_empty(&xsurface->events.request_fullscreen.listener_list));
+	assert(wl_list_empty(&xsurface->events.request_activate.listener_list));
+	assert(wl_list_empty(&xsurface->events.request_close.listener_list));
+	assert(wl_list_empty(&xsurface->events.associate.listener_list));
+	assert(wl_list_empty(&xsurface->events.dissociate.listener_list));
+	assert(wl_list_empty(&xsurface->events.set_class.listener_list));
+	assert(wl_list_empty(&xsurface->events.set_role.listener_list));
+	assert(wl_list_empty(&xsurface->events.set_title.listener_list));
+	assert(wl_list_empty(&xsurface->events.set_parent.listener_list));
+	assert(wl_list_empty(&xsurface->events.set_startup_id.listener_list));
+	assert(wl_list_empty(&xsurface->events.set_window_type.listener_list));
+	assert(wl_list_empty(&xsurface->events.set_hints.listener_list));
+	assert(wl_list_empty(&xsurface->events.set_decorations.listener_list));
+	assert(wl_list_empty(&xsurface->events.set_strut_partial.listener_list));
+	assert(wl_list_empty(&xsurface->events.set_override_redirect.listener_list));
+	assert(wl_list_empty(&xsurface->events.set_geometry.listener_list));
+	assert(wl_list_empty(&xsurface->events.focus_in.listener_list));
+	assert(wl_list_empty(&xsurface->events.grab_focus.listener_list));
+	assert(wl_list_empty(&xsurface->events.map_request.listener_list));
+	assert(wl_list_empty(&xsurface->events.ping_timeout.listener_list));
 
 	if (xsurface == xsurface->xwm->focus_surface) {
 		xwm_surface_activate(xsurface->xwm, NULL);

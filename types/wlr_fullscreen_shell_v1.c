@@ -109,6 +109,10 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_fullscreen_shell_v1 *shell =
 		wl_container_of(listener, shell, display_destroy);
 	wl_signal_emit_mutable(&shell->events.destroy, shell);
+
+	assert(wl_list_empty(&shell->events.destroy.listener_list));
+	assert(wl_list_empty(&shell->events.present_surface.listener_list));
+
 	wl_list_remove(&shell->display_destroy.link);
 	wl_global_destroy(shell->global);
 	free(shell);

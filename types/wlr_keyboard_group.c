@@ -311,7 +311,9 @@ void wlr_keyboard_group_destroy(struct wlr_keyboard_group *group) {
 		wlr_keyboard_group_remove_keyboard(group, device->keyboard);
 	}
 	wlr_keyboard_finish(&group->keyboard);
-	wl_list_remove(&group->events.enter.listener_list);
-	wl_list_remove(&group->events.leave.listener_list);
+
+	assert(wl_list_empty(&group->events.enter.listener_list));
+	assert(wl_list_empty(&group->events.leave.listener_list));
+
 	free(group);
 }

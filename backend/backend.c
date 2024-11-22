@@ -49,6 +49,10 @@ void wlr_backend_init(struct wlr_backend *backend,
 
 void wlr_backend_finish(struct wlr_backend *backend) {
 	wl_signal_emit_mutable(&backend->events.destroy, backend);
+
+	assert(wl_list_empty(&backend->events.destroy.listener_list));
+	assert(wl_list_empty(&backend->events.new_input.listener_list));
+	assert(wl_list_empty(&backend->events.new_output.listener_list));
 }
 
 bool wlr_backend_start(struct wlr_backend *backend) {

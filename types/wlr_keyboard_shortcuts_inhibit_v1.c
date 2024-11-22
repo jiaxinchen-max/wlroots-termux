@@ -36,6 +36,8 @@ static void keyboard_shortcuts_inhibitor_v1_destroy(
 
 	wl_signal_emit_mutable(&inhibitor->events.destroy, inhibitor);
 
+	assert(wl_list_empty(&inhibitor->events.destroy.listener_list));
+
 	wl_resource_set_user_data(inhibitor->resource, NULL);
 	wl_list_remove(&inhibitor->link);
 	wl_list_remove(&inhibitor->surface_destroy.link);
@@ -132,6 +134,7 @@ static void manager_handle_inhibit_shortcuts(struct wl_client *client,
 	inhibitor->surface = surface;
 	inhibitor->seat = seat;
 	inhibitor->active = false;
+
 	wl_signal_init(&inhibitor->events.destroy);
 
 	inhibitor->surface_destroy.notify =
@@ -162,6 +165,10 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_keyboard_shortcuts_inhibit_manager_v1 *manager =
 		wl_container_of(listener, manager, display_destroy);
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
+	assert(wl_list_empty(&manager->events.new_inhibitor.listener_list));
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 	wl_global_destroy(manager->global);
 	free(manager);
@@ -191,6 +198,7 @@ wlr_keyboard_shortcuts_inhibit_v1_create(struct wl_display *display) {
 	}
 
 	wl_list_init(&manager->inhibitors);
+
 	wl_signal_init(&manager->events.new_inhibitor);
 	wl_signal_init(&manager->events.destroy);
 

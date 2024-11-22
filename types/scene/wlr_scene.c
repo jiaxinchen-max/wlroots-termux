@@ -833,6 +833,7 @@ struct wlr_scene_buffer *wlr_scene_buffer_create(struct wlr_scene_tree *parent,
 	wl_signal_init(&scene_buffer->events.output_leave);
 	wl_signal_init(&scene_buffer->events.output_sample);
 	wl_signal_init(&scene_buffer->events.frame_done);
+
 	pixman_region32_init(&scene_buffer->opaque_region);
 	wl_list_init(&scene_buffer->buffer_release.link);
 	wl_list_init(&scene_buffer->renderer_destroy.link);

@@ -33,6 +33,8 @@ void wlr_xdg_activation_token_v1_destroy(
 
 	wl_signal_emit_mutable(&token->events.destroy, NULL);
 
+	assert(wl_list_empty(&token->events.destroy.listener_list));
+
 	wl_list_remove(&token->link);
 	wl_list_remove(&token->seat_destroy.link);
 	wl_list_remove(&token->surface_destroy.link);
@@ -256,6 +258,7 @@ static struct wlr_xdg_activation_token_v1 *activation_token_create(
 	wl_list_init(&token->link);
 	wl_list_init(&token->seat_destroy.link);
 	wl_list_init(&token->surface_destroy.link);
+
 	wl_signal_init(&token->events.destroy);
 
 	token->activation = activation;
@@ -340,6 +343,10 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 		wl_container_of(listener, activation, display_destroy);
 	wl_signal_emit_mutable(&activation->events.destroy, NULL);
 
+	assert(wl_list_empty(&activation->events.destroy.listener_list));
+	assert(wl_list_empty(&activation->events.request_activate.listener_list));
+	assert(wl_list_empty(&activation->events.new_token.listener_list));
+
 	struct wlr_xdg_activation_token_v1 *token, *token_tmp;
 	wl_list_for_each_safe(token, token_tmp, &activation->tokens, link) {
 		wlr_xdg_activation_token_v1_destroy(token);
@@ -359,6 +366,7 @@ struct wlr_xdg_activation_v1 *wlr_xdg_activation_v1_create(
 
 	activation->token_timeout_msec = 30000; // 30s
 	wl_list_init(&activation->tokens);
+
 	wl_signal_init(&activation->events.destroy);
 	wl_signal_init(&activation->events.request_activate);
 	wl_signal_init(&activation->events.new_token);

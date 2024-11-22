@@ -215,6 +215,10 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_gamma_control_manager_v1 *manager =
 		wl_container_of(listener, manager, display_destroy);
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+	assert(wl_list_empty(&manager->events.set_gamma.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 	wl_global_destroy(manager->global);
 	free(manager);
@@ -237,6 +241,7 @@ struct wlr_gamma_control_manager_v1 *wlr_gamma_control_manager_v1_create(
 
 	wl_signal_init(&manager->events.destroy);
 	wl_signal_init(&manager->events.set_gamma);
+
 	wl_list_init(&manager->controls);
 
 	manager->display_destroy.notify = handle_display_destroy;

@@ -166,6 +166,9 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_presentation *presentation =
 		wl_container_of(listener, presentation, display_destroy);
 	wl_signal_emit_mutable(&presentation->events.destroy, presentation);
+
+	assert(wl_list_empty(&presentation->events.destroy.listener_list));
+
 	wl_list_remove(&presentation->display_destroy.link);
 	wl_global_destroy(presentation->global);
 	free(presentation);

@@ -494,6 +494,14 @@ void wlr_foreign_toplevel_handle_v1_destroy(
 
 	wl_signal_emit_mutable(&toplevel->events.destroy, toplevel);
 
+	assert(wl_list_empty(&toplevel->events.request_maximize.listener_list));
+	assert(wl_list_empty(&toplevel->events.request_minimize.listener_list));
+	assert(wl_list_empty(&toplevel->events.request_activate.listener_list));
+	assert(wl_list_empty(&toplevel->events.request_fullscreen.listener_list));
+	assert(wl_list_empty(&toplevel->events.request_close.listener_list));
+	assert(wl_list_empty(&toplevel->events.set_rectangle.listener_list));
+	assert(wl_list_empty(&toplevel->events.destroy.listener_list));
+
 	struct wl_resource *resource, *tmp;
 	wl_resource_for_each_safe(resource, tmp, &toplevel->resources) {
 		zwlr_foreign_toplevel_handle_v1_send_closed(resource);
@@ -675,6 +683,9 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_foreign_toplevel_manager_v1 *manager =
 		wl_container_of(listener, manager, display_destroy);
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 	wl_global_destroy(manager->global);
 	free(manager);
@@ -698,6 +709,7 @@ struct wlr_foreign_toplevel_manager_v1 *wlr_foreign_toplevel_manager_v1_create(
 	}
 
 	wl_signal_init(&manager->events.destroy);
+
 	wl_list_init(&manager->resources);
 	wl_list_init(&manager->toplevels);
 

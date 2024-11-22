@@ -295,6 +295,11 @@ void wlr_session_destroy(struct wlr_session *session) {
 	}
 
 	wl_signal_emit_mutable(&session->events.destroy, session);
+
+	assert(wl_list_empty(&session->events.active.listener_list));
+	assert(wl_list_empty(&session->events.add_drm_card.listener_list));
+	assert(wl_list_empty(&session->events.destroy.listener_list));
+
 	wl_list_remove(&session->event_loop_destroy.link);
 
 	wl_event_source_remove(session->udev_event);

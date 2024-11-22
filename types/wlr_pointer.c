@@ -51,6 +51,20 @@ void wlr_pointer_finish(struct wlr_pointer *pointer) {
 
 	wlr_input_device_finish(&pointer->base);
 
+	assert(wl_list_empty(&pointer->events.motion.listener_list));
+	assert(wl_list_empty(&pointer->events.motion_absolute.listener_list));
+	assert(wl_list_empty(&pointer->events.button.listener_list));
+	assert(wl_list_empty(&pointer->events.axis.listener_list));
+	assert(wl_list_empty(&pointer->events.frame.listener_list));
+	assert(wl_list_empty(&pointer->events.swipe_begin.listener_list));
+	assert(wl_list_empty(&pointer->events.swipe_update.listener_list));
+	assert(wl_list_empty(&pointer->events.swipe_end.listener_list));
+	assert(wl_list_empty(&pointer->events.pinch_begin.listener_list));
+	assert(wl_list_empty(&pointer->events.pinch_update.listener_list));
+	assert(wl_list_empty(&pointer->events.pinch_end.listener_list));
+	assert(wl_list_empty(&pointer->events.hold_begin.listener_list));
+	assert(wl_list_empty(&pointer->events.hold_end.listener_list));
+
 	free(pointer->output_name);
 }
 
