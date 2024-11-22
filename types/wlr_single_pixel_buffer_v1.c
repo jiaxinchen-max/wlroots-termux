@@ -53,10 +53,13 @@ static const struct wlr_buffer_resource_interface buffer_resource_interface = {
 static void buffer_destroy(struct wlr_buffer *wlr_buffer) {
 	struct wlr_single_pixel_buffer_v1 *buffer =
 		wl_container_of(wlr_buffer, buffer, base);
+	wl_list_remove(&buffer->release.link);
+
+	wlr_buffer_finish(wlr_buffer);
+
 	if (buffer->resource != NULL) {
 		wl_resource_set_user_data(buffer->resource, NULL);
 	}
-	wl_list_remove(&buffer->release.link);
 	free(buffer);
 }
 

@@ -37,6 +37,11 @@ void wlr_buffer_init(struct wlr_buffer *buffer,
 	const struct wlr_buffer_impl *impl, int width, int height);
 
 /**
+ * Emit the destroy event and clean up common buffer state.
+ */
+void wlr_buffer_finish(struct wlr_buffer *buffer);
+
+/**
  * Allows the registration of a struct wl_resource implementation.
  *
  * The matching function will be called for the struct wl_resource when creating

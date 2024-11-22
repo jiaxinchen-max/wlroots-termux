@@ -15,6 +15,7 @@ static struct wlr_dmabuf_buffer *dmabuf_buffer_from_buffer(
 
 static void dmabuf_buffer_destroy(struct wlr_buffer *wlr_buffer) {
 	struct wlr_dmabuf_buffer *buffer = dmabuf_buffer_from_buffer(wlr_buffer);
+	wlr_buffer_finish(wlr_buffer);
 	if (buffer->saved) {
 		wlr_dmabuf_attributes_finish(&buffer->dmabuf);
 	}

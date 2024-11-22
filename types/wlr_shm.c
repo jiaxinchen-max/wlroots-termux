@@ -155,8 +155,11 @@ static void pool_consider_destroy(struct wlr_shm_pool *pool);
 
 static void buffer_destroy(struct wlr_buffer *wlr_buffer) {
 	struct wlr_shm_buffer *buffer = wl_container_of(wlr_buffer, buffer, base);
-	assert(buffer->resource == NULL);
 	wl_list_remove(&buffer->release.link);
+
+	wlr_buffer_finish(wlr_buffer);
+
+	assert(buffer->resource == NULL);
 	wl_list_remove(&buffer->link);
 	pool_consider_destroy(buffer->pool);
 	free(buffer);

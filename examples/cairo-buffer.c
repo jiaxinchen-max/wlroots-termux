@@ -24,6 +24,7 @@ struct cairo_buffer {
 
 static void cairo_buffer_destroy(struct wlr_buffer *wlr_buffer) {
 	struct cairo_buffer *buffer = wl_container_of(wlr_buffer, buffer, base);
+	wlr_buffer_finish(wlr_buffer);
 	cairo_surface_destroy(buffer->surface);
 	free(buffer);
 }
