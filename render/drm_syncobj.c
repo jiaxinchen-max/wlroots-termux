@@ -241,7 +241,8 @@ bool wlr_drm_syncobj_timeline_waiter_init(struct wlr_drm_syncobj_timeline_waiter
 }
 
 void wlr_drm_syncobj_timeline_waiter_finish(struct wlr_drm_syncobj_timeline_waiter *waiter) {
-	wl_list_remove(&waiter->events.ready.listener_list);
+	assert(wl_list_empty(&waiter->events.ready.listener_list));
+
 	wl_event_source_remove(waiter->event_source);
 	close(waiter->ev_fd);
 }

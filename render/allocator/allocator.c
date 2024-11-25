@@ -24,6 +24,7 @@ void wlr_allocator_init(struct wlr_allocator *alloc,
 		.impl = impl,
 		.buffer_caps = buffer_caps,
 	};
+
 	wl_signal_init(&alloc->events.destroy);
 }
 
@@ -155,6 +156,9 @@ void wlr_allocator_destroy(struct wlr_allocator *alloc) {
 		return;
 	}
 	wl_signal_emit_mutable(&alloc->events.destroy, NULL);
+
+	assert(wl_list_empty(&alloc->events.destroy.listener_list));
+
 	alloc->impl->destroy(alloc);
 }
 

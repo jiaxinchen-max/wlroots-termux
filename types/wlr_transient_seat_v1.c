@@ -115,6 +115,11 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_transient_seat_manager_v1 *manager =
 		wl_container_of(listener, manager, display_destroy);
 
+	wl_signal_emit_mutable(&manager->events.destroy, NULL);
+
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+	assert(wl_list_empty(&manager->events.create_seat.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 	wl_global_destroy(manager->global);
 	free(manager);
@@ -154,6 +159,7 @@ struct wlr_transient_seat_manager_v1 *wlr_transient_seat_manager_v1_create(
 	manager->display_destroy.notify = handle_display_destroy;
 	wl_display_add_destroy_listener(display, &manager->display_destroy);
 
+	wl_signal_init(&manager->events.destroy);
 	wl_signal_init(&manager->events.create_seat);
 
 	return manager;

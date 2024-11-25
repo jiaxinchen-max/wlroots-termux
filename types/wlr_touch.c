@@ -30,5 +30,11 @@ void wlr_touch_init(struct wlr_touch *touch,
 void wlr_touch_finish(struct wlr_touch *touch) {
 	wlr_input_device_finish(&touch->base);
 
+	assert(wl_list_empty(&touch->events.down.listener_list));
+	assert(wl_list_empty(&touch->events.up.listener_list));
+	assert(wl_list_empty(&touch->events.motion.listener_list));
+	assert(wl_list_empty(&touch->events.cancel.listener_list));
+	assert(wl_list_empty(&touch->events.frame.listener_list));
+
 	free(touch->output_name);
 }

@@ -647,6 +647,11 @@ static void manager_handle_display_destroy(struct wl_listener *listener,
 	struct wlr_output_manager_v1 *manager =
 		wl_container_of(listener, manager, display_destroy);
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+	assert(wl_list_empty(&manager->events.apply.listener_list));
+	assert(wl_list_empty(&manager->events.test.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 	struct wlr_output_head_v1 *head, *tmp;
 	wl_list_for_each_safe(head, tmp, &manager->heads, link) {
@@ -666,6 +671,7 @@ struct wlr_output_manager_v1 *wlr_output_manager_v1_create(
 
 	wl_list_init(&manager->resources);
 	wl_list_init(&manager->heads);
+
 	wl_signal_init(&manager->events.destroy);
 	wl_signal_init(&manager->events.apply);
 	wl_signal_init(&manager->events.test);

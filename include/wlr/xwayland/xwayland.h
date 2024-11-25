@@ -51,6 +51,7 @@ struct wlr_xwayland {
 	struct wlr_seat *seat;
 
 	struct {
+		struct wl_signal destroy;
 		struct wl_signal ready;
 		struct wl_signal new_surface; // struct wlr_xwayland_surface
 		struct wl_signal remove_startup_info; // struct wlr_xwayland_remove_startup_info_event

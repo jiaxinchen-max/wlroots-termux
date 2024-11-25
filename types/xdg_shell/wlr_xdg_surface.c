@@ -523,6 +523,12 @@ void destroy_xdg_surface(struct wlr_xdg_surface *surface) {
 
 	wl_signal_emit_mutable(&surface->events.destroy, NULL);
 
+	assert(wl_list_empty(&surface->events.destroy.listener_list));
+	assert(wl_list_empty(&surface->events.ping_timeout.listener_list));
+	assert(wl_list_empty(&surface->events.new_popup.listener_list));
+	assert(wl_list_empty(&surface->events.configure.listener_list));
+	assert(wl_list_empty(&surface->events.ack_configure.listener_list));
+
 	wl_list_remove(&surface->link);
 	wlr_surface_synced_finish(&surface->synced);
 	wl_resource_set_user_data(surface->resource, NULL);

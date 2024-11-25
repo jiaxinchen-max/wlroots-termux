@@ -178,6 +178,7 @@ struct wlr_xwayland_shell_v1 *wlr_xwayland_shell_v1_create(
 	}
 
 	wl_list_init(&shell->surfaces);
+
 	wl_signal_init(&shell->events.new_surface);
 	wl_signal_init(&shell->events.destroy);
 
@@ -195,6 +196,9 @@ void wlr_xwayland_shell_v1_destroy(struct wlr_xwayland_shell_v1 *shell) {
 	}
 
 	wl_signal_emit_mutable(&shell->events.destroy, NULL);
+
+	assert(wl_list_empty(&shell->events.new_surface.listener_list));
+	assert(wl_list_empty(&shell->events.destroy.listener_list));
 
 	struct wlr_xwayland_surface_v1 *xwl_surface, *tmp;
 	wl_list_for_each_safe(xwl_surface, tmp, &shell->surfaces, link) {

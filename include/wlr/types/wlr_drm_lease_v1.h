@@ -20,6 +20,8 @@ struct wlr_drm_lease_v1_manager {
 	struct wl_display *display;
 
 	struct {
+		struct wl_signal destroy;
+
 		/**
 		 * Upon receiving this signal, call
 		 * wlr_drm_lease_device_v1_grant_lease_request() to grant a lease of the

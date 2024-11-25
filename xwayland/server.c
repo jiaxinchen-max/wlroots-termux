@@ -444,7 +444,13 @@ void wlr_xwayland_server_destroy(struct wlr_xwayland_server *server) {
 	}
 	server_finish_process(server);
 	server_finish_display(server);
+
 	wl_signal_emit_mutable(&server->events.destroy, NULL);
+
+	assert(wl_list_empty(&server->events.start.listener_list));
+	assert(wl_list_empty(&server->events.ready.listener_list));
+	assert(wl_list_empty(&server->events.destroy.listener_list));
+
 	free(server);
 }
 

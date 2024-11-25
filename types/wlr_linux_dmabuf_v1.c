@@ -856,6 +856,8 @@ static const struct wlr_buffer_resource_interface buffer_resource_interface = {
 static void linux_dmabuf_v1_destroy(struct wlr_linux_dmabuf_v1 *linux_dmabuf) {
 	wl_signal_emit_mutable(&linux_dmabuf->events.destroy, linux_dmabuf);
 
+	assert(wl_list_empty(&linux_dmabuf->events.destroy.listener_list));
+
 	struct wlr_linux_dmabuf_v1_surface *surface, *surface_tmp;
 	wl_list_for_each_safe(surface, surface_tmp, &linux_dmabuf->surfaces, link) {
 		surface_destroy(surface);
@@ -955,6 +957,7 @@ struct wlr_linux_dmabuf_v1 *wlr_linux_dmabuf_v1_create(struct wl_display *displa
 	linux_dmabuf->main_device_fd = -1;
 
 	wl_list_init(&linux_dmabuf->surfaces);
+
 	wl_signal_init(&linux_dmabuf->events.destroy);
 
 	linux_dmabuf->global = wl_global_create(display, &zwp_linux_dmabuf_v1_interface,

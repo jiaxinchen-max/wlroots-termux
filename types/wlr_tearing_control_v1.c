@@ -34,6 +34,9 @@ static void destroy_tearing_hint(struct wlr_tearing_control_v1 *hint) {
 
 	wl_signal_emit_mutable(&hint->events.destroy, NULL);
 
+	assert(wl_list_empty(&hint->events.set_hint.listener_list));
+	assert(wl_list_empty(&hint->events.destroy.listener_list));
+
 	wl_list_remove(&hint->link);
 	wl_resource_set_user_data(hint->resource, NULL);
 
@@ -169,6 +172,9 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 		wl_container_of(listener, manager, display_destroy);
 
 	wl_signal_emit_mutable(&manager->events.destroy, NULL);
+
+	assert(wl_list_empty(&manager->events.new_object.listener_list));
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
 
 	struct wlr_tearing_control_v1 *hint, *tmp;
 	wl_list_for_each_safe(hint, tmp, &manager->surface_hints, link) {

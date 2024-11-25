@@ -397,6 +397,9 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_pointer_gestures_v1 *gestures =
 		wl_container_of(listener, gestures, display_destroy);
 	wl_signal_emit_mutable(&gestures->events.destroy, NULL);
+
+	assert(wl_list_empty(&gestures->events.destroy.listener_list));
+
 	wl_list_remove(&gestures->display_destroy.link);
 	wl_global_destroy(gestures->global);
 	free(gestures);

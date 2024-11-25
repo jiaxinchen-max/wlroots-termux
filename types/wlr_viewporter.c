@@ -230,6 +230,9 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_viewporter *viewporter =
 		wl_container_of(listener, viewporter, display_destroy);
 	wl_signal_emit_mutable(&viewporter->events.destroy, NULL);
+
+	assert(wl_list_empty(&viewporter->events.destroy.listener_list));
+
 	wl_global_destroy(viewporter->global);
 	free(viewporter);
 }

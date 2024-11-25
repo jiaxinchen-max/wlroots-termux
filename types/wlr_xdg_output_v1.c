@@ -140,7 +140,7 @@ static void output_manager_handle_get_xdg_output(struct wl_client *client,
 	output_send_details(xdg_output, xdg_output_resource);
 
 	uint32_t wl_version = wl_resource_get_version(output_resource);
-	if (wl_version >= WL_OUTPUT_DONE_SINCE_VERSION && 
+	if (wl_version >= WL_OUTPUT_DONE_SINCE_VERSION &&
 			xdg_version >= OUTPUT_DONE_DEPRECATED_SINCE_VERSION) {
 		wl_output_send_done(output_resource);
 	}
@@ -234,7 +234,11 @@ static void manager_destroy(struct wlr_xdg_output_manager_v1 *manager) {
 	wl_list_for_each_safe(output, tmp, &manager->outputs, link) {
 		output_destroy(output);
 	}
+
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 	wl_list_remove(&manager->layout_add.link);
 	wl_list_remove(&manager->layout_change.link);

@@ -247,6 +247,34 @@ static void cursor_reset_image(struct wlr_cursor *cur) {
 }
 
 void wlr_cursor_destroy(struct wlr_cursor *cur) {
+	// pointer signals
+	assert(wl_list_empty(&cur->events.motion.listener_list));
+	assert(wl_list_empty(&cur->events.motion_absolute.listener_list));
+	assert(wl_list_empty(&cur->events.button.listener_list));
+	assert(wl_list_empty(&cur->events.axis.listener_list));
+	assert(wl_list_empty(&cur->events.frame.listener_list));
+	assert(wl_list_empty(&cur->events.swipe_begin.listener_list));
+	assert(wl_list_empty(&cur->events.swipe_update.listener_list));
+	assert(wl_list_empty(&cur->events.swipe_end.listener_list));
+	assert(wl_list_empty(&cur->events.pinch_begin.listener_list));
+	assert(wl_list_empty(&cur->events.pinch_update.listener_list));
+	assert(wl_list_empty(&cur->events.pinch_end.listener_list));
+	assert(wl_list_empty(&cur->events.hold_begin.listener_list));
+	assert(wl_list_empty(&cur->events.hold_end.listener_list));
+
+	// touch signals
+	assert(wl_list_empty(&cur->events.touch_up.listener_list));
+	assert(wl_list_empty(&cur->events.touch_down.listener_list));
+	assert(wl_list_empty(&cur->events.touch_motion.listener_list));
+	assert(wl_list_empty(&cur->events.touch_cancel.listener_list));
+	assert(wl_list_empty(&cur->events.touch_frame.listener_list));
+
+	// tablet tool signals
+	assert(wl_list_empty(&cur->events.tablet_tool_tip.listener_list));
+	assert(wl_list_empty(&cur->events.tablet_tool_axis.listener_list));
+	assert(wl_list_empty(&cur->events.tablet_tool_button.listener_list));
+	assert(wl_list_empty(&cur->events.tablet_tool_proximity.listener_list));
+
 	cursor_reset_image(cur);
 	cursor_detach_output_layout(cur);
 

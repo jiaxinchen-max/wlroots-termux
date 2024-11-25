@@ -26,6 +26,8 @@ struct wlr_transient_seat_manager_v1 {
 	struct wl_global *global;
 
 	struct {
+		struct wl_signal destroy;
+
 		/**
 		 * Upon receiving this signal, call
 		 * wlr_transient_seat_v1_ready() to pass a newly created seat

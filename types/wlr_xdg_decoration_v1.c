@@ -62,6 +62,10 @@ static void toplevel_decoration_handle_resource_destroy(
 	struct wlr_xdg_toplevel_decoration_v1 *decoration =
 		toplevel_decoration_from_resource(resource);
 	wl_signal_emit_mutable(&decoration->events.destroy, decoration);
+
+	assert(wl_list_empty(&decoration->events.destroy.listener_list));
+	assert(wl_list_empty(&decoration->events.request_mode.listener_list));
+
 	wlr_surface_synced_finish(&decoration->synced);
 	wl_list_remove(&decoration->toplevel_destroy.link);
 	wl_list_remove(&decoration->surface_configure.link);
@@ -217,6 +221,7 @@ static void decoration_manager_handle_get_toplevel_decoration(
 		decoration->resource);
 
 	wl_list_init(&decoration->configure_list);
+
 	wl_signal_init(&decoration->events.destroy);
 	wl_signal_init(&decoration->events.request_mode);
 
@@ -256,6 +261,10 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_xdg_decoration_manager_v1 *manager =
 		wl_container_of(listener, manager, display_destroy);
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
+	assert(wl_list_empty(&manager->events.new_toplevel_decoration.listener_list));
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 	wl_global_destroy(manager->global);
 	free(manager);
@@ -275,6 +284,7 @@ struct wlr_xdg_decoration_manager_v1 *
 		return NULL;
 	}
 	wl_list_init(&manager->decorations);
+
 	wl_signal_init(&manager->events.new_toplevel_decoration);
 	wl_signal_init(&manager->events.destroy);
 

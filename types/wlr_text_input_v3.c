@@ -65,6 +65,12 @@ void wlr_text_input_v3_send_done(struct wlr_text_input_v3 *text_input) {
 
 static void wlr_text_input_destroy(struct wlr_text_input_v3 *text_input) {
 	wl_signal_emit_mutable(&text_input->events.destroy, text_input);
+
+	assert(wl_list_empty(&text_input->events.enable.listener_list));
+	assert(wl_list_empty(&text_input->events.commit.listener_list));
+	assert(wl_list_empty(&text_input->events.disable.listener_list));
+	assert(wl_list_empty(&text_input->events.destroy.listener_list));
+
 	text_input_clear_focused_surface(text_input);
 	wl_list_remove(&text_input->seat_destroy.link);
 	// remove from manager.text_inputs
@@ -308,6 +314,10 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_text_input_manager_v3 *manager =
 		wl_container_of(listener, manager, display_destroy);
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
+	assert(wl_list_empty(&manager->events.text_input.listener_list));
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 	wl_global_destroy(manager->global);
 	free(manager);
@@ -321,6 +331,7 @@ struct wlr_text_input_manager_v3 *wlr_text_input_manager_v3_create(
 	}
 
 	wl_list_init(&manager->text_inputs);
+
 	wl_signal_init(&manager->events.text_input);
 	wl_signal_init(&manager->events.destroy);
 

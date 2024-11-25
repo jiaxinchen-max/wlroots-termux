@@ -25,4 +25,6 @@ void wlr_switch_init(struct wlr_switch *switch_device,
 
 void wlr_switch_finish(struct wlr_switch *switch_device) {
 	wlr_input_device_finish(&switch_device->base);
+
+	assert(wl_list_empty(&switch_device->events.toggle.listener_list));
 }

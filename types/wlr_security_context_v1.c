@@ -390,6 +390,7 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_security_context_manager_v1 *manager =
 		wl_container_of(listener, manager, display_destroy);
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
 	assert(wl_list_empty(&manager->events.destroy.listener_list));
 	assert(wl_list_empty(&manager->events.commit.listener_list));
 
@@ -419,6 +420,7 @@ struct wlr_security_context_manager_v1 *wlr_security_context_manager_v1_create(
 	}
 
 	wl_list_init(&manager->contexts);
+
 	wl_signal_init(&manager->events.destroy);
 	wl_signal_init(&manager->events.commit);
 

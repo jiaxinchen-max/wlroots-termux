@@ -467,6 +467,9 @@ void destroy_xdg_popup(struct wlr_xdg_popup *popup) {
 
 	wl_signal_emit_mutable(&popup->events.destroy, NULL);
 
+	assert(wl_list_empty(&popup->events.destroy.listener_list));
+	assert(wl_list_empty(&popup->events.reposition.listener_list));
+
 	wlr_surface_synced_finish(&popup->synced);
 	popup->base->popup = NULL;
 	wl_list_remove(&popup->link);

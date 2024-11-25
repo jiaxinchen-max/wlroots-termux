@@ -52,6 +52,9 @@ static void multi_backend_destroy(struct wlr_backend *wlr_backend) {
 
 	wlr_backend_finish(wlr_backend);
 
+	assert(wl_list_empty(&backend->events.backend_add.listener_list));
+	assert(wl_list_empty(&backend->events.backend_remove.listener_list));
+
 	// Some backends may depend on other backends, ie. destroying a backend may
 	// also destroy other backends
 	while (!wl_list_empty(&backend->backends)) {

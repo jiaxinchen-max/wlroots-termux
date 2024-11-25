@@ -525,6 +525,17 @@ void destroy_xdg_toplevel(struct wlr_xdg_toplevel *toplevel) {
 
 	wl_signal_emit_mutable(&toplevel->events.destroy, NULL);
 
+	assert(wl_list_empty(&toplevel->events.destroy.listener_list));
+	assert(wl_list_empty(&toplevel->events.request_maximize.listener_list));
+	assert(wl_list_empty(&toplevel->events.request_fullscreen.listener_list));
+	assert(wl_list_empty(&toplevel->events.request_minimize.listener_list));
+	assert(wl_list_empty(&toplevel->events.request_move.listener_list));
+	assert(wl_list_empty(&toplevel->events.request_resize.listener_list));
+	assert(wl_list_empty(&toplevel->events.request_show_window_menu.listener_list));
+	assert(wl_list_empty(&toplevel->events.set_parent.listener_list));
+	assert(wl_list_empty(&toplevel->events.set_title.listener_list));
+	assert(wl_list_empty(&toplevel->events.set_app_id.listener_list));
+
 	wlr_surface_synced_finish(&toplevel->synced);
 	toplevel->base->toplevel = NULL;
 	wl_resource_set_user_data(toplevel->resource, NULL);

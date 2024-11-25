@@ -345,6 +345,9 @@ static void xdg_foreign_destroy(struct wlr_xdg_foreign_v1 *foreign) {
 	}
 
 	wl_signal_emit_mutable(&foreign->events.destroy, NULL);
+
+	assert(wl_list_empty(&foreign->events.destroy.listener_list));
+
 	wl_list_remove(&foreign->foreign_registry_destroy.link);
 	wl_list_remove(&foreign->display_destroy.link);
 
@@ -395,6 +398,7 @@ struct wlr_xdg_foreign_v1 *wlr_xdg_foreign_v1_create(
 	foreign->registry = registry;
 
 	wl_signal_init(&foreign->events.destroy);
+
 	wl_list_init(&foreign->exporter.objects);
 	wl_list_init(&foreign->importer.objects);
 

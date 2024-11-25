@@ -270,6 +270,9 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	struct wlr_tablet_manager_v2 *manager =
 		wl_container_of(listener, manager, display_destroy);
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 
 	struct wlr_tablet_seat_v2 *seat, *tmp;
@@ -296,6 +299,7 @@ struct wlr_tablet_manager_v2 *wlr_tablet_v2_create(struct wl_display *display) {
 	}
 
 	wl_signal_init(&tablet->events.destroy);
+
 	wl_list_init(&tablet->clients);
 	wl_list_init(&tablet->seats);
 

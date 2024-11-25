@@ -462,6 +462,9 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 	}
 
 	wl_signal_emit_mutable(&manager->events.destroy, manager);
+
+	assert(wl_list_empty(&manager->events.destroy.listener_list));
+
 	wl_list_remove(&manager->display_destroy.link);
 	wl_global_destroy(manager->global);
 	free(manager);
@@ -483,6 +486,7 @@ struct wlr_primary_selection_v1_device_manager *
 	}
 
 	wl_list_init(&manager->devices);
+
 	wl_signal_init(&manager->events.destroy);
 
 	manager->display_destroy.notify = handle_display_destroy;

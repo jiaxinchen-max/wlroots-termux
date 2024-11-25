@@ -2156,6 +2156,8 @@ void drm_lease_destroy(struct wlr_drm_lease *lease) {
 
 	wl_signal_emit_mutable(&lease->events.destroy, NULL);
 
+	assert(wl_list_empty(&lease->events.destroy.listener_list));
+
 	struct wlr_drm_connector *conn;
 	wl_list_for_each(conn, &drm->connectors, link) {
 		if (conn->lease == lease) {

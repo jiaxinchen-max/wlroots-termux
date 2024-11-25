@@ -186,6 +186,8 @@ static const struct wlr_buffer_resource_interface buffer_resource_interface = {
 static void drm_destroy(struct wlr_drm *drm) {
 	wl_signal_emit_mutable(&drm->events.destroy, NULL);
 
+	assert(wl_list_empty(&drm->events.destroy.listener_list));
+
 	wl_list_remove(&drm->display_destroy.link);
 
 	wlr_drm_format_set_finish(&drm->formats);
