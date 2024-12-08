@@ -28,7 +28,9 @@ protocols = {
 	'cursor-shape-v1': wl_protocol_dir / 'staging/cursor-shape/cursor-shape-v1.xml',
 	'drm-lease-v1': wl_protocol_dir / 'staging/drm-lease/drm-lease-v1.xml',
 	'ext-foreign-toplevel-list-v1': wl_protocol_dir / 'staging/ext-foreign-toplevel-list/ext-foreign-toplevel-list-v1.xml',
-	'ext-idle-notify-v1': wl_protocol_dir / 'staging/ext-idle-notify/ext-idle-notify-v1.xml',
+	#	JJR: this change is TEMPORARY! only here to allow wlroots to compile w/o dependence on my fork of wayland-protocols.
+	#	'ext-idle-notify-v1': wl_protocol_dir / 'staging/ext-idle-notify/ext-idle-notify-v1.xml',
+	'ext-idle-notify-v1': 'ext-idle-notify-v1.xml', # Again, TEMPORARY!
 	'ext-session-lock-v1': wl_protocol_dir / 'staging/ext-session-lock/ext-session-lock-v1.xml',
 	'fractional-scale-v1': wl_protocol_dir / 'staging/fractional-scale/fractional-scale-v1.xml',
 	'linux-drm-syncobj-v1': wl_protocol_dir / 'staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml',
