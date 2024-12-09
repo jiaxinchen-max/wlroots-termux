@@ -213,6 +213,11 @@ static bool legacy_commit(struct wlr_drm_backend *drm,
 		if (!legacy_crtc_test(conn_state, state->modeset)) {
 			return false;
 		}
+
+		if (test_only && !conn_state->connector->crtc->cursor
+				&& !conn_state->connector->output.software_cursor_locks) {
+			wlr_output_lock_software_cursors(&conn_state->connector->output, true);
+		}
 	}
 
 	if (test_only) {
