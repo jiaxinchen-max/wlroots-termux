@@ -20,6 +20,14 @@ static void drag_handle_seat_client_destroy(struct wl_listener *listener,
 }
 
 static void drag_set_focus(struct wlr_drag *drag,
+	struct wlr_surface *surface, double sx, double sy);
+
+static void drag_handle_focus_destroy(struct wl_listener *listener, void *data) {
+	struct wlr_drag *drag = wl_container_of(listener, drag, focus_destroy);
+	drag_set_focus(drag, NULL, 0, 0);
+}
+
+static void drag_set_focus(struct wlr_drag *drag,
 		struct wlr_surface *surface, double sx, double sy) {
 	if (drag->focus == surface) {
 		return;
@@ -48,8 +56,11 @@ static void drag_set_focus(struct wlr_drag *drag,
 		}
 
 		drag->focus_client = NULL;
-		drag->focus = NULL;
 	}
+
+	wl_list_remove(&drag->focus_destroy.link);
+	wl_list_init(&drag->focus_destroy.link);
+	drag->focus = NULL;
 
 	if (!surface) {
 		goto out;
@@ -99,6 +110,8 @@ static void drag_set_focus(struct wlr_drag *drag,
 
 	drag->focus = surface;
 	drag->focus_client = focus_client;
+	drag->focus_destroy.notify = drag_handle_focus_destroy;
+	wl_signal_add(&surface->events.destroy, &drag->focus_destroy);
 	drag->seat_client_destroy.notify = drag_handle_seat_client_destroy;
 	wl_signal_add(&focus_client->events.destroy, &drag->seat_client_destroy);
 
@@ -150,6 +163,7 @@ static void drag_destroy(struct wlr_drag *drag) {
 	if (drag->source) {
 		wl_list_remove(&drag->source_destroy.link);
 	}
+	wl_list_remove(&drag->focus_destroy.link);
 
 	if (drag->icon != NULL) {
 		drag_icon_destroy(drag->icon);
@@ -409,6 +423,8 @@ struct wlr_drag *wlr_drag_create(struct wlr_seat_client *seat_client,
 	wl_signal_init(&drag->events.motion);
 	wl_signal_init(&drag->events.drop);
 	wl_signal_init(&drag->events.destroy);
+
+	wl_list_init(&drag->focus_destroy.link);
 
 	drag->seat = seat_client->seat;
 	drag->seat_client = seat_client;

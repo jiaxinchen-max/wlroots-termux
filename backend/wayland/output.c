@@ -198,7 +198,7 @@ static struct wl_buffer *import_shm(struct wlr_wl_backend *wl,
 		struct wlr_shm_attributes *shm) {
 	enum wl_shm_format wl_shm_format = convert_drm_format_to_wl_shm(shm->format);
 	uint32_t size = shm->stride * shm->height;
-	struct wl_shm_pool *pool = wl_shm_create_pool(wl->shm, shm->fd, size);
+	struct wl_shm_pool *pool = wl_shm_create_pool(wl->shm, shm->fd, shm->offset + size);
 	if (pool == NULL) {
 		return NULL;
 	}

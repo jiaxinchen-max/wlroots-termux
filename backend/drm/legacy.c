@@ -128,7 +128,7 @@ static bool legacy_crtc_commit(const struct wlr_drm_connector_state *state,
 			state->base->adaptive_sync_enabled ? "enabled" : "disabled");
 	}
 
-	if (cursor != NULL && drm_connector_is_cursor_visible(conn)) {
+	if (cursor != NULL && state->active && drm_connector_is_cursor_visible(conn)) {
 		struct wlr_drm_fb *cursor_fb = state->cursor_fb;
 		if (cursor_fb == NULL) {
 			wlr_drm_conn_log(conn, WLR_DEBUG, "Failed to acquire cursor FB");
@@ -170,7 +170,9 @@ static bool legacy_crtc_commit(const struct wlr_drm_connector_state *state,
 		}
 	}
 
-	if (flags & DRM_MODE_PAGE_FLIP_EVENT) {
+	// Legacy uAPI doesn't support requesting page-flip events when
+	// turning off a CRTC
+	if (state->active && (flags & DRM_MODE_PAGE_FLIP_EVENT)) {
 		if (drmModePageFlip(drm->fd, crtc->id, fb_id, flags, page_flip)) {
 			wlr_drm_conn_log_errno(conn, WLR_ERROR, "drmModePageFlip failed");
 			return false;

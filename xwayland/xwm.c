@@ -1879,6 +1879,8 @@ void xwm_destroy(struct wlr_xwm *xwm) {
 	xwm_selection_finish(&xwm->primary_selection);
 	xwm_selection_finish(&xwm->dnd_selection);
 
+	xwm_seat_unlink_drag_handlers(xwm);
+
 	if (xwm->seat) {
 		if (xwm->seat->selection_source &&
 				data_source_is_xwayland(xwm->seat->selection_source)) {
@@ -2173,6 +2175,10 @@ struct wlr_xwm *xwm_create(struct wlr_xwayland *xwayland, int wm_fd) {
 	wl_list_init(&xwm->surfaces_in_stack_order);
 	wl_list_init(&xwm->unpaired_surfaces);
 	wl_list_init(&xwm->pending_startup_ids);
+	wl_list_init(&xwm->seat_drag_source_destroy.link);
+	wl_list_init(&xwm->drag_focus_destroy.link);
+	wl_list_init(&xwm->drop_focus_destroy.link);
+
 	xwm->ping_timeout = 10000;
 
 	xwm->xcb_conn = xcb_connect_to_fd(wm_fd, NULL);

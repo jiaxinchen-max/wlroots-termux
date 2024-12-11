@@ -267,6 +267,8 @@ struct wlr_vk_buffer_span vulkan_get_stage_span(struct wlr_vk_renderer *r,
 		goto error_alloc;
 	}
 
+	wl_list_init(&buf->link);
+
 	VkResult res;
 	VkBufferCreateInfo buf_info = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,

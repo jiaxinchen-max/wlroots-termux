@@ -577,6 +577,16 @@ static void drm_connector_apply_commit(const struct wlr_drm_connector_state *sta
 
 		conn->cursor_enabled = false;
 		conn->crtc = NULL;
+
+		// Legacy uAPI doesn't support requesting page-flip events when
+		// turning off a CRTC
+		if (page_flip != NULL && conn->backend->iface == &legacy_iface) {
+			drm_page_flip_pop(page_flip, crtc->id);
+			conn->pending_page_flip = NULL;
+			if (page_flip->connectors_len == 0) {
+				drm_page_flip_destroy(page_flip);
+			}
+		}
 	}
 }
 
@@ -801,6 +811,22 @@ static bool drm_connector_prepare(struct wlr_drm_connector_state *conn_state, bo
 		wlr_drm_conn_log(conn, WLR_DEBUG,
 				"Can't enable adaptive sync: connector doesn't support VRR");
 		return false;
+	}
+
+	if ((state->committed & WLR_OUTPUT_STATE_BUFFER) && conn->backend->mgpu_renderer.wlr_rend) {
+		struct wlr_dmabuf_attributes dmabuf;
+		if (!wlr_buffer_get_dmabuf(state->buffer, &dmabuf)) {
+			wlr_drm_conn_log(conn, WLR_DEBUG, "Buffer is not a DMA-BUF");
+			return false;
+		}
+
+		if (!wlr_drm_format_set_has(&conn->backend->mgpu_formats, dmabuf.format, dmabuf.modifier)) {
+			wlr_drm_conn_log(conn, WLR_DEBUG,
+				"Buffer format 0x%"PRIX32" with modifier 0x%"PRIX64" cannot be "
+				"imported into multi-GPU renderer",
+				dmabuf.format, dmabuf.modifier);
+			return false;
+		}
 	}
 
 	if (test_only && conn->backend->parent) {

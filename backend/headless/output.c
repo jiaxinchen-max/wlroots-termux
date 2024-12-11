@@ -89,6 +89,7 @@ static void output_destroy(struct wlr_output *wlr_output) {
 
 static const struct wlr_output_impl output_impl = {
 	.destroy = output_destroy,
+	.test = output_test,
 	.commit = output_commit,
 };
 
