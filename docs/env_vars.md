@@ -37,6 +37,9 @@ wlroots reads these environment variables
 ## libinput backend
 
 * *WLR_LIBINPUT_NO_DEVICES*: set to 1 to not fail without any input devices
+* *WLR_LIBINPUT_LOG_PRIORITY*: set libinput log priority (available
+  priority: debug, info, error). If this environment variable is not set, the
+  default log priority is **debug**.
 
 ## Wayland backend
 

@@ -82,6 +82,16 @@ static void log_libinput(struct libinput *libinput_context,
 	_wlr_vlog(importance, wlr_fmt, args);
 }
 
+static enum libinput_log_priority get_log_priority(const char *log_priority) {
+	if (strcmp(log_priority, "info") == 0) {
+		return LIBINPUT_LOG_PRIORITY_INFO;
+	} else if (strcmp(log_priority, "error") == 0) {
+		return LIBINPUT_LOG_PRIORITY_ERROR;
+	}
+
+	return LIBINPUT_LOG_PRIORITY_DEBUG;
+}
+
 static bool backend_start(struct wlr_backend *wlr_backend) {
 	struct wlr_libinput_backend *backend =
 		get_libinput_backend_from_backend(wlr_backend);
@@ -100,9 +110,17 @@ static bool backend_start(struct wlr_backend *wlr_backend) {
 		return false;
 	}
 
-	// TODO: More sophisticated logging
 	libinput_log_set_handler(backend->libinput_context, log_libinput);
-	libinput_log_set_priority(backend->libinput_context, LIBINPUT_LOG_PRIORITY_ERROR);
+	const char *libinput_log_priorities[] = {
+		"debug",
+		"info",
+		"error",
+		NULL
+	};
+
+	const char *log_priority = libinput_log_priorities[env_parse_switch(
+		"WLR_LIBINPUT_LOG_PRIORITY", libinput_log_priorities)];
+	libinput_log_set_priority(backend->libinput_context, get_log_priority(log_priority));
 
 	int libinput_fd = libinput_get_fd(backend->libinput_context);
 
@@ -242,4 +260,12 @@ const char *get_libinput_device_name(struct libinput_device *device) {
 		return NULL;
 	}
 	return name;
+}
+
+void wlr_libinput_log_set_priority(struct wlr_backend *wlr_backend,
+		enum libinput_log_priority priority) {
+	struct wlr_libinput_backend *backend =
+		get_libinput_backend_from_backend(wlr_backend);
+
+	libinput_log_set_priority(backend->libinput_context, priority);
 }

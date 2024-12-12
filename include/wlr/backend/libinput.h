@@ -25,5 +25,7 @@ struct libinput_device *wlr_libinput_get_device_handle(
 
 bool wlr_backend_is_libinput(struct wlr_backend *backend);
 bool wlr_input_device_is_libinput(struct wlr_input_device *device);
+void wlr_libinput_log_set_priority(struct wlr_backend *wlr_backend,
+		enum libinput_log_priority priority);
 
 #endif
