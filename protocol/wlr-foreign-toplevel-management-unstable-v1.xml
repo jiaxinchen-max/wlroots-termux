@@ -25,7 +25,7 @@
     THIS SOFTWARE.
   </copyright>
 
-  <interface name="zwlr_foreign_toplevel_manager_v1" version="3">
+  <interface name="zwlr_foreign_toplevel_manager_v1" version="4">
     <description summary="list and control opened apps">
       The purpose of this protocol is to enable the creation of taskbars
       and docks by providing them with a list of opened applications and
@@ -58,7 +58,7 @@
       </description>
     </request>
 
-    <event name="finished">
+    <event name="finished" type="destructor">
       <description summary="the compositor has finished with the toplevel manager">
         This event indicates that the compositor is done sending events to the
         zwlr_foreign_toplevel_manager_v1. The server will destroy the object
@@ -68,7 +68,7 @@
     </event>
   </interface>
 
-  <interface name="zwlr_foreign_toplevel_handle_v1" version="3">
+  <interface name="zwlr_foreign_toplevel_handle_v1" version="4">
     <description summary="an opened toplevel">
       A zwlr_foreign_toplevel_handle_v1 object represents an opened toplevel
       window. Each app may have multiple opened toplevels.
@@ -146,14 +146,45 @@
 
     <enum name="state">
       <description summary="types of states on the toplevel">
-        The different states that a toplevel can have. These have the same meaning
-        as the states with the same names defined in xdg-toplevel
+        The different states that a toplevel can have.
+        A compositor may not support all states in which case they will never be set.
       </description>
 
-      <entry name="maximized"  value="0" summary="the toplevel is maximized"/>
-      <entry name="minimized"  value="1" summary="the toplevel is minimized"/>
-      <entry name="activated"  value="2" summary="the toplevel is active"/>
-      <entry name="fullscreen" value="3" summary="the toplevel is fullscreen" since="2"/>
+      <entry name="maximized"     value="0" summary="the toplevel is maximized"/>
+      <entry name="minimized"     value="1" summary="the toplevel is minimized"/>
+      <entry name="activated"     value="2" summary="the toplevel is active"/>
+      <entry name="fullscreen"    value="3" summary="the toplevel is fullscreen" since="2"/>
+      <entry name="always_on_top" value="4" since="4">
+        <description summary="always on top of the stacking order">
+          The exact policy in regards to what "stacking order" means is compositor policy.
+          In a auto tiling compositor for example this could mean that toplevels with this
+          state set are always positioned in the most prominent tile. In a more traditional
+          stacking compositor this usually means that applicatios with this state set are
+          rendered top-most on a given workspace. In X11 terms this is known as 'above'.
+        </description>
+      </entry>
+      <entry name="on_all_workspaces" value="5" since="4">
+        <description summary="called 'sticky' in X11 terms">
+          Toplevels with this state set should show up on all workspaces. What exactly this
+          means is compositor policy. For example in a tag based compositor a toplevel with
+          this state set could show up on any tag. In X11 terms this is known as 'sticky'.
+        </description>
+      </entry>
+      <entry name="rolled_up" value="6" since="4">
+        <description summary="called 'shaded' in X11 terms">
+          Toplevel with this state set are "rolled up" so that only the titlebar is visible.
+          In X11 terms this is known as 'shade'.
+        </description>
+      </entry>
+      <entry name="urgent" value="7" since="4">
+        <description summary="the toplevel is requesting attention">
+          Toplevel with this state set are requesting attention. This state can only be set
+          by the compositor. The circumstances when this state is enabled and disabled is
+          compositor policy. A compositor may for example use the xdg-activation protocol
+          to treat activation requests with invalid tokens as a request for urgency and
+          disable this state again once the toplevel receives focus.
+        </description>
+      </entry>
     </enum>
 
     <event name="state">
@@ -266,5 +297,50 @@
       </description>
       <arg name="parent" type="object" interface="zwlr_foreign_toplevel_handle_v1" allow-null="true"/>
     </event>
+
+    <!-- Version 4 additions -->
+
+    <request name="set_always_on_top" since="4">
+      <description summary="requests that the toplevel be set to always on top">
+        Requests that the toplevel be set to always on top.
+        If the state actually changes, this will be indicated by the state event.
+      </description>
+    </request>
+
+    <request name="unset_always_on_top" since="4">
+      <description summary="Requests that the toplevel stops being set to always on top">
+        Requests that the toplevel stops being set to always on top.
+        If the state actually changes, this will be indicated by the state event.
+      </description>
+    </request>
+
+    <request name="set_visible_on_all_workspaces" since="4">
+      <description summary="Requests that the toplevel be shown on all workspaces">
+        Requests that the toplevel be shown on all workspaces.
+        If the state actually changes, this will be indicated by the state event.
+      </description>
+    </request>
+
+    <request name="unset_visible_on_all_workspaces" since="4">
+      <description summary="Requests that the toplevel is not shown on all workspaces">
+        Requests that the toplevel is not shown on all workspaces.
+        If the state actually changes, this will be indicated by the state event.
+      </description>
+    </request>
+
+    <request name="set_rolled_up" since="4">
+      <description summary="Requests that the toplevel be rolled up (shaded)">
+        Requests that the toplevel be rolled up (shaded).
+        If the state actually changes, this will be indicated by the state event.
+      </description>
+    </request>
+
+    <request name="unset_rolled_up" since="4">
+      <description summary="Requests that the toplevel be rolled down (unshaded)">
+        Requests that the toplevel be rolled down (unshaded).
+        If the state actually changes, this will be indicated by the state event.
+      </description>
+    </request>
+
   </interface>
 </protocol>
