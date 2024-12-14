@@ -339,7 +339,7 @@ void wlr_foreign_toplevel_handle_v1_output_leave(
 }
 
 static bool fill_array_from_toplevel_state(struct wl_array *array,
-		uint32_t state) {
+		uint32_t state, uint32_t version) {
 	if (state & WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MAXIMIZED) {
 		uint32_t *index = wl_array_add(array, sizeof(uint32_t));
 		if (index == NULL) {
@@ -361,6 +361,10 @@ static bool fill_array_from_toplevel_state(struct wl_array *array,
 		}
 		*index = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED;
 	}
+
+	if (version < ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN_SINCE_VERSION) {
+		return true;
+	}
 	if (state & WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN) {
 		uint32_t *index = wl_array_add(array, sizeof(uint32_t));
 		if (index == NULL) {
@@ -374,20 +378,26 @@ static bool fill_array_from_toplevel_state(struct wl_array *array,
 
 static void toplevel_send_state(struct wlr_foreign_toplevel_handle_v1 *toplevel) {
 	struct wl_array states;
+	uint32_t last_version = 0;
 	wl_array_init(&states);
-	bool r = fill_array_from_toplevel_state(&states, toplevel->state);
-	if (!r) {
-		struct wl_resource *resource;
-		wl_resource_for_each(resource, &toplevel->resources) {
-			wl_resource_post_no_memory(resource);
-		}
-
-		wl_array_release(&states);
-		return;
-	}
 
 	struct wl_resource *resource;
 	wl_resource_for_each(resource, &toplevel->resources) {
+		uint32_t version = wl_resource_get_version(resource);
+		if (version != last_version) {
+			/* Clients may have bound a version without FULLSCREEN state */
+			wl_array_release(&states);
+			wl_array_init(&states);
+			bool r = fill_array_from_toplevel_state(
+				&states, toplevel->state, version);
+			if (!r) {
+				wl_resource_post_no_memory(resource);
+				last_version = 0;
+				continue;
+			}
+			last_version = version;
+		}
+
 		zwlr_foreign_toplevel_handle_v1_send_state(resource, &states);
 	}
 
@@ -602,7 +612,8 @@ static void toplevel_send_details_to_toplevel_resource(
 
 	struct wl_array states;
 	wl_array_init(&states);
-	bool r = fill_array_from_toplevel_state(&states, toplevel->state);
+	bool r = fill_array_from_toplevel_state(&states,
+		toplevel->state, wl_resource_get_version(resource));
 	if (!r) {
 		wl_resource_post_no_memory(resource);
 		wl_array_release(&states);
