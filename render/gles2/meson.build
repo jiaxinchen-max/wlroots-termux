@@ -4,6 +4,8 @@ if not (glesv2.found() and internal_features['egl'])
 	subdir_done()
 endif
 
+glslang = find_program('glslang', 'glslangValidator', native: true, required: false, disabler: true)
+
 features += { 'gles2-renderer': true }
 wlr_deps += glesv2
 
