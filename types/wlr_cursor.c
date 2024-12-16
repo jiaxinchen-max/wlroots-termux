@@ -590,9 +590,15 @@ static void cursor_output_cursor_update(struct wlr_cursor_output_cursor *output_
 		wlr_xcursor_manager_load(manager, scale);
 		struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(manager, name, scale);
 		if (xcursor == NULL) {
-			wlr_log(WLR_DEBUG, "XCursor theme is missing '%s' cursor", name);
-			wlr_output_cursor_set_buffer(output_cursor->output_cursor, NULL, 0, 0);
-			return;
+			/* Try the default cursor: better the wrong image than an invisible
+			 * (and therefore practically unusable) cursor */
+			wlr_log(WLR_DEBUG, "XCursor theme is missing '%s' cursor, falling back to 'default'", name);
+			xcursor = wlr_xcursor_manager_get_xcursor(manager, "default", scale);
+			if (xcursor == NULL) {
+				wlr_log(WLR_DEBUG, "XCursor theme is missing a 'default' cursor");
+				wlr_output_cursor_set_buffer(output_cursor->output_cursor, NULL, 0, 0);
+				return;
+			}
 		}
 
 		output_cursor->xcursor = xcursor;
