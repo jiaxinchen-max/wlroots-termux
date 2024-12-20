@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <drm_fourcc.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -1166,4 +1167,211 @@ bool wlr_linux_dmabuf_feedback_v1_init_with_options(struct wlr_linux_dmabuf_feed
 error:
 	wlr_linux_dmabuf_feedback_v1_finish(feedback);
 	return false;
+}
+
+struct wlr_surface_dmabuf_waiter_commit {
+	struct wlr_surface_dmabuf_waiter *waiter;
+	uint32_t surface_lock_seq;
+	int fds[WLR_DMABUF_MAX_PLANES]; // not owned by us
+	struct wl_event_source *event_sources[WLR_DMABUF_MAX_PLANES];
+	struct wl_list link; // wlr_surface_dmabuf_waiter.commits
+};
+
+static void surface_dmabuf_waiter_commit_destroy(
+		struct wlr_surface_dmabuf_waiter_commit *waiter_commit) {
+	for (size_t i = 0; i < WLR_DMABUF_MAX_PLANES; i++) {
+		if (waiter_commit->event_sources[i] != NULL) {
+			wl_event_source_remove(waiter_commit->event_sources[i]);
+		}
+	}
+
+	wlr_surface_unlock_cached(waiter_commit->waiter->surface, waiter_commit->surface_lock_seq);
+
+	wl_list_remove(&waiter_commit->link);
+	free(waiter_commit);
+}
+
+static int surface_dmabuf_waiter_handle_fd_event(int fd, uint32_t mask, void *data) {
+	struct wlr_surface_dmabuf_waiter_commit *waiter_commit = data;
+
+	if (mask & (WL_EVENT_HANGUP | WL_EVENT_ERROR)) {
+		wlr_log(WLR_ERROR, "Got hangup/error while polling on DMA-BUF");
+	}
+
+	bool found = false;
+	bool need_wait = false;
+	for (size_t i = 0; i < WLR_DMABUF_MAX_PLANES; i++) {
+		if (waiter_commit->fds[i] == fd) {
+			wl_event_source_remove(waiter_commit->event_sources[i]);
+			waiter_commit->event_sources[i] = NULL;
+			found = true;
+		} else if (waiter_commit->event_sources[i] != NULL) {
+			need_wait = true;
+		}
+	}
+	if (!found) {
+		wlr_log(WLR_ERROR, "Got event for unknown DMA-BUF FD");
+		return 0;
+	} else if (need_wait) {
+		return 0;
+	}
+
+	surface_dmabuf_waiter_commit_destroy(waiter_commit);
+	return 0;
+}
+
+static void surface_dmabuf_waiter_handle_client_commit(struct wl_listener *listener, void *data) {
+	struct wlr_surface_dmabuf_waiter *waiter = wl_container_of(listener, waiter, client_commit);
+	struct wlr_surface *surface = waiter->surface;
+
+	if (!(surface->pending.committed & WLR_SURFACE_STATE_BUFFER)) {
+		return;
+	}
+
+	struct wlr_buffer *buffer = surface->pending.buffer;
+	struct wlr_dmabuf_attributes dmabuf = {0};
+	if (buffer == NULL || !wlr_buffer_get_dmabuf(buffer, &dmabuf)) {
+		return;
+	}
+
+	// First check whether all DMA-BUF FDs are already ready
+	bool need_wait = false;
+	bool ready[WLR_DMABUF_MAX_PLANES] = {0};
+	for (int i = 0; i < dmabuf.n_planes; i++) {
+		struct pollfd pollfd = {
+			.fd = dmabuf.fd[i],
+			.events = POLLIN,
+		};
+		if (poll(&pollfd, 1, 0) < 0) {
+			wlr_log_errno(WLR_ERROR, "poll() failed");
+			return;
+		} else if (pollfd.revents & (POLLHUP | POLLERR)) {
+			wlr_log(WLR_ERROR, "Got hangup/error while polling on DMA-BUF");
+			return;
+		}
+
+		if (pollfd.revents & POLLIN) {
+			ready[i] = true;
+		} else {
+			need_wait = true;
+		}
+	}
+	if (!need_wait) {
+		return;
+	}
+
+	struct wlr_surface_dmabuf_waiter_commit *waiter_commit = calloc(1, sizeof(*waiter_commit));
+	if (waiter_commit == NULL) {
+		wlr_log_errno(WLR_ERROR, "Allocation failed");
+		return;
+	}
+	waiter_commit->waiter = waiter;
+
+	struct wl_client *client = wl_resource_get_client(surface->resource);
+	struct wl_display *display = wl_client_get_display(client);
+	struct wl_event_loop *event_loop = wl_display_get_event_loop(display);
+
+	for (int i = 0; i < dmabuf.n_planes; i++) {
+		if (ready[i]) {
+			continue;
+		}
+		struct wl_event_source *event_source = wl_event_loop_add_fd(event_loop, dmabuf.fd[i],
+			WL_EVENT_READABLE, surface_dmabuf_waiter_handle_fd_event, waiter_commit);
+		if (event_source == NULL) {
+			wlr_log(WLR_ERROR, "wl_event_loop_add_fd() failed");
+			goto error;
+		}
+		waiter_commit->fds[i] = dmabuf.fd[i];
+		waiter_commit->event_sources[i] = event_source;
+	}
+
+	// wlr_compositor ensures the wlr_buffer will remain alive (IOW, the
+	// DMA-BUF FDs will remain opened) while we have a lock
+	waiter_commit->surface_lock_seq = wlr_surface_lock_pending(waiter->surface);
+	wl_list_insert(&waiter->commits, &waiter_commit->link);
+
+	return;
+
+error:
+	for (int i = 0; i < dmabuf.n_planes; i++) {
+		if (waiter_commit->event_sources[i] != NULL) {
+			wl_event_source_remove(waiter_commit->event_sources[i]);
+		}
+	}
+	free(waiter_commit);
+}
+
+void wlr_surface_dmabuf_waiter_init(struct wlr_surface_dmabuf_waiter *waiter,
+		struct wlr_surface *surface) {
+	*waiter = (struct wlr_surface_dmabuf_waiter){0};
+
+	waiter->surface = surface;
+	wl_list_init(&waiter->commits);
+
+	waiter->client_commit.notify = surface_dmabuf_waiter_handle_client_commit;
+	wl_signal_add(&surface->events.client_commit, &waiter->client_commit);
+}
+
+void wlr_surface_dmabuf_waiter_finish(struct wlr_surface_dmabuf_waiter *waiter) {
+	struct wlr_surface_dmabuf_waiter_commit *waiter_commit, *waiter_commit_tmp;
+	wl_list_for_each_safe(waiter_commit, waiter_commit_tmp, &waiter->commits, link) {
+		surface_dmabuf_waiter_commit_destroy(waiter_commit);
+	}
+
+	wl_list_remove(&waiter->commits);
+	wl_list_remove(&waiter->client_commit.link);
+}
+
+struct wlr_compositor_dmabuf_waiter {
+	struct wl_listener new_surface;
+	struct wl_listener destroy;
+};
+
+struct wlr_compositor_dmabuf_waiter_surface {
+	struct wlr_surface_dmabuf_waiter base;
+	struct wl_listener destroy;
+};
+
+static void compositor_dmabuf_waiter_surface_handle_destroy(struct wl_listener *listener, void *data) {
+	struct wlr_compositor_dmabuf_waiter_surface *waiter_surface =
+		wl_container_of(listener, waiter_surface, destroy);
+	wlr_surface_dmabuf_waiter_finish(&waiter_surface->base);
+	wl_list_remove(&waiter_surface->destroy.link);
+	free(waiter_surface);
+}
+
+static void compositor_dmabuf_waiter_handle_new_surface(struct wl_listener *listener, void *data) {
+	struct wlr_surface *surface = data;
+
+	struct wlr_compositor_dmabuf_waiter_surface *waiter_surface = calloc(1, sizeof(*waiter_surface));
+	if (waiter_surface == NULL) {
+		wlr_log(WLR_ERROR, "Allocation failed");
+		return;
+	}
+
+	wlr_surface_dmabuf_waiter_init(&waiter_surface->base, surface);
+
+	waiter_surface->destroy.notify = compositor_dmabuf_waiter_surface_handle_destroy;
+	wl_signal_add(&surface->events.destroy, &waiter_surface->destroy);
+}
+
+static void compositor_dmabuf_waiter_handle_destroy(struct wl_listener *listener, void *data) {
+	struct wlr_compositor_dmabuf_waiter *waiter =
+		wl_container_of(listener, waiter, destroy);
+	wl_list_remove(&waiter->new_surface.link);
+	wl_list_remove(&waiter->destroy.link);
+	free(waiter);
+}
+
+void wlr_compositor_dmabuf_waiter_create(struct wlr_compositor *compositor) {
+	struct wlr_compositor_dmabuf_waiter *waiter = calloc(1, sizeof(*waiter));
+	if (waiter == NULL) {
+		wlr_log(WLR_ERROR, "Allocation failed");
+		return;
+	}
+
+	waiter->new_surface.notify = compositor_dmabuf_waiter_handle_new_surface;
+	wl_signal_add(&compositor->events.new_surface, &waiter->new_surface);
+	waiter->destroy.notify = compositor_dmabuf_waiter_handle_destroy;
+	wl_signal_add(&compositor->events.destroy, &waiter->destroy);
 }
