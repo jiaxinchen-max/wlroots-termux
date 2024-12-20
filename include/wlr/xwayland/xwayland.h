@@ -178,6 +178,13 @@ struct wlr_xwayland_surface {
 	bool maximized_vert, maximized_horz;
 	bool minimized;
 	bool withdrawn;
+	bool sticky;
+	bool shaded;
+	bool skip_taskbar;
+	bool skip_pager;
+	bool above;
+	bool below;
+	bool demands_attention;
 
 	bool has_alpha;
 
@@ -191,6 +198,13 @@ struct wlr_xwayland_surface {
 		struct wl_signal request_fullscreen;
 		struct wl_signal request_activate;
 		struct wl_signal request_close;
+		struct wl_signal request_sticky;
+		struct wl_signal request_shaded;
+		struct wl_signal request_skip_taskbar;
+		struct wl_signal request_skip_pager;
+		struct wl_signal request_above;
+		struct wl_signal request_below;
+		struct wl_signal request_demands_attention;
 
 		struct wl_signal associate;
 		struct wl_signal dissociate;
@@ -291,6 +305,27 @@ void wlr_xwayland_surface_set_maximized(struct wlr_xwayland_surface *surface,
 
 void wlr_xwayland_surface_set_fullscreen(struct wlr_xwayland_surface *surface,
 	bool fullscreen);
+
+void wlr_xwayland_surface_set_sticky(
+	struct wlr_xwayland_surface *surface, bool sticky);
+
+void wlr_xwayland_surface_set_shaded(
+	struct wlr_xwayland_surface *surface, bool shaded);
+
+void wlr_xwayland_surface_set_skip_taskbar(
+	struct wlr_xwayland_surface *surface, bool skip_taskbar);
+
+void wlr_xwayland_surface_set_skip_pager(
+	struct wlr_xwayland_surface *surface, bool skip_pager);
+
+void wlr_xwayland_surface_set_above(
+	struct wlr_xwayland_surface *surface, bool above);
+
+void wlr_xwayland_surface_set_below(
+	struct wlr_xwayland_surface *surface, bool below);
+
+void wlr_xwayland_surface_set_demands_attention(
+	struct wlr_xwayland_surface *surface, bool demands_attention);
 
 void wlr_xwayland_set_seat(struct wlr_xwayland *xwayland,
 	struct wlr_seat *seat);
