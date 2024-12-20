@@ -30,10 +30,14 @@ struct wlr_foreign_toplevel_manager_v1 {
 };
 
 enum wlr_foreign_toplevel_handle_v1_state {
-	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MAXIMIZED = (1 << 0),
-	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MINIMIZED = (1 << 1),
-	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED = (1 << 2),
-	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN = (1 << 3),
+	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MAXIMIZED         = (1 << 0),
+	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MINIMIZED         = (1 << 1),
+	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED         = (1 << 2),
+	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN        = (1 << 3),
+	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ALWAYS_ON_TOP     = (1 << 4),
+	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ON_ALL_WORKSPACES = (1 << 5),
+	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ROLLED_UP         = (1 << 6),
+	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_URGENT            = (1 << 7),
 };
 
 struct wlr_foreign_toplevel_handle_v1_output {
@@ -69,6 +73,9 @@ struct wlr_foreign_toplevel_handle_v1 {
 		// struct wlr_foreign_toplevel_handle_v1_fullscreen_event
 		struct wl_signal request_fullscreen;
 		struct wl_signal request_close;
+		struct wl_signal request_always_on_top;
+		struct wl_signal request_on_all_workspaces;
+		struct wl_signal request_roll_up;
 
 		// struct wlr_foreign_toplevel_handle_v1_set_rectangle_event
 		struct wl_signal set_rectangle;
@@ -97,6 +104,21 @@ struct wlr_foreign_toplevel_handle_v1_fullscreen_event {
 	struct wlr_foreign_toplevel_handle_v1 *toplevel;
 	bool fullscreen;
 	struct wlr_output *output;
+};
+
+struct wlr_foreign_toplevel_handle_v1_always_on_top_event {
+	struct wlr_foreign_toplevel_handle_v1 *toplevel;
+	bool always_on_top;
+};
+
+struct wlr_foreign_toplevel_handle_v1_on_all_workspaces_event {
+	struct wlr_foreign_toplevel_handle_v1 *toplevel;
+	bool on_all_workspaces;
+};
+
+struct wlr_foreign_toplevel_handle_v1_roll_up_event {
+	struct wlr_foreign_toplevel_handle_v1 *toplevel;
+	bool roll_up;
 };
 
 struct wlr_foreign_toplevel_handle_v1_set_rectangle_event {
@@ -139,6 +161,14 @@ void wlr_foreign_toplevel_handle_v1_set_activated(
 	struct wlr_foreign_toplevel_handle_v1 *toplevel, bool activated);
 void wlr_foreign_toplevel_handle_v1_set_fullscreen(
 	struct wlr_foreign_toplevel_handle_v1* toplevel, bool fullscreen);
+void wlr_foreign_toplevel_handle_v1_set_always_on_top(
+	struct wlr_foreign_toplevel_handle_v1* toplevel, bool always_on_top);
+void wlr_foreign_toplevel_handle_v1_set_on_all_workspaces(
+	struct wlr_foreign_toplevel_handle_v1* toplevel, bool on_all_workspaces);
+void wlr_foreign_toplevel_handle_v1_set_rolled_up(
+	struct wlr_foreign_toplevel_handle_v1* toplevel, bool rolled_up);
+void wlr_foreign_toplevel_handle_v1_set_urgent(
+	struct wlr_foreign_toplevel_handle_v1* toplevel, bool urgent);
 
 /**
  * Set the parent of a toplevel. If the parent changed from its previous

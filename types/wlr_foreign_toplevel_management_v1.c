@@ -8,7 +8,7 @@
 #include <wlr/util/log.h>
 #include "wlr-foreign-toplevel-management-unstable-v1-protocol.h"
 
-#define FOREIGN_TOPLEVEL_MANAGEMENT_V1_VERSION 3
+#define FOREIGN_TOPLEVEL_MANAGEMENT_V1_VERSION 4
 
 static const struct zwlr_foreign_toplevel_handle_v1_interface toplevel_handle_impl;
 
@@ -67,6 +67,79 @@ static void foreign_toplevel_handle_set_minimized(struct wl_client *client,
 static void foreign_toplevel_handle_unset_minimized(struct wl_client *client,
 		struct wl_resource *resource) {
 	toplevel_send_minimized_event(resource, false);
+}
+
+static void toplevel_send_always_on_top_event(struct wl_resource *resource,
+		bool state) {
+	struct wlr_foreign_toplevel_handle_v1 *toplevel =
+		toplevel_handle_from_resource(resource);
+	if (!toplevel) {
+		return;
+	}
+
+	struct wlr_foreign_toplevel_handle_v1_always_on_top_event event = {
+		.toplevel = toplevel,
+		.always_on_top = state,
+	};
+	wl_signal_emit_mutable(&toplevel->events.request_always_on_top, &event);
+}
+
+static void foreign_toplevel_handle_set_always_on_top(struct wl_client *client,
+		struct wl_resource *resource) {
+	toplevel_send_always_on_top_event(resource, true);
+}
+
+static void foreign_toplevel_handle_unset_always_on_top(struct wl_client *client,
+		struct wl_resource *resource) {
+	toplevel_send_always_on_top_event(resource, false);
+}
+static void toplevel_send_on_all_workspaces_event(struct wl_resource *resource,
+		bool state) {
+	struct wlr_foreign_toplevel_handle_v1 *toplevel =
+		toplevel_handle_from_resource(resource);
+	if (!toplevel) {
+		return;
+	}
+
+	struct wlr_foreign_toplevel_handle_v1_on_all_workspaces_event event = {
+		.toplevel = toplevel,
+		.on_all_workspaces = state,
+	};
+	wl_signal_emit_mutable(&toplevel->events.request_on_all_workspaces, &event);
+}
+
+static void foreign_toplevel_handle_set_on_all_workspaces(struct wl_client *client,
+		struct wl_resource *resource) {
+	toplevel_send_on_all_workspaces_event(resource, true);
+}
+
+static void foreign_toplevel_handle_unset_on_all_workspaces(struct wl_client *client,
+		struct wl_resource *resource) {
+	toplevel_send_on_all_workspaces_event(resource, false);
+}
+static void toplevel_send_roll_up_event(struct wl_resource *resource,
+		bool state) {
+	struct wlr_foreign_toplevel_handle_v1 *toplevel =
+		toplevel_handle_from_resource(resource);
+	if (!toplevel) {
+		return;
+	}
+
+	struct wlr_foreign_toplevel_handle_v1_roll_up_event event = {
+		.toplevel = toplevel,
+		.roll_up = state,
+	};
+	wl_signal_emit_mutable(&toplevel->events.request_roll_up, &event);
+}
+
+static void foreign_toplevel_handle_set_roll_up(struct wl_client *client,
+		struct wl_resource *resource) {
+	toplevel_send_roll_up_event(resource, true);
+}
+
+static void foreign_toplevel_handle_unset_roll_up(struct wl_client *client,
+		struct wl_resource *resource) {
+	toplevel_send_roll_up_event(resource, false);
 }
 
 static void toplevel_send_fullscreen_event(struct wl_resource *resource,
@@ -171,6 +244,12 @@ static const struct zwlr_foreign_toplevel_handle_v1_interface toplevel_handle_im
 	.destroy = foreign_toplevel_handle_destroy,
 	.set_fullscreen = foreign_toplevel_handle_set_fullscreen,
 	.unset_fullscreen = foreign_toplevel_handle_unset_fullscreen,
+	.set_always_on_top = foreign_toplevel_handle_set_always_on_top,
+	.unset_always_on_top = foreign_toplevel_handle_unset_always_on_top,
+	.set_visible_on_all_workspaces = foreign_toplevel_handle_set_on_all_workspaces,
+	.unset_visible_on_all_workspaces = foreign_toplevel_handle_unset_on_all_workspaces,
+	.set_rolled_up = foreign_toplevel_handle_set_roll_up,
+	.unset_rolled_up = foreign_toplevel_handle_unset_roll_up,
 };
 
 static void toplevel_idle_send_done(void *data) {
@@ -339,7 +418,7 @@ void wlr_foreign_toplevel_handle_v1_output_leave(
 }
 
 static bool fill_array_from_toplevel_state(struct wl_array *array,
-		uint32_t state) {
+		uint32_t state, uint32_t version) {
 	if (state & WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MAXIMIZED) {
 		uint32_t *index = wl_array_add(array, sizeof(uint32_t));
 		if (index == NULL) {
@@ -361,6 +440,10 @@ static bool fill_array_from_toplevel_state(struct wl_array *array,
 		}
 		*index = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED;
 	}
+
+	if (version < ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN_SINCE_VERSION) {
+		return true;
+	}
 	if (state & WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN) {
 		uint32_t *index = wl_array_add(array, sizeof(uint32_t));
 		if (index == NULL) {
@@ -369,25 +452,63 @@ static bool fill_array_from_toplevel_state(struct wl_array *array,
 		*index = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN;
 	}
 
+	if (version < ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ALWAYS_ON_TOP_SINCE_VERSION) {
+		return true;
+	}
+	if (state & WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ALWAYS_ON_TOP) {
+		uint32_t *index = wl_array_add(array, sizeof(uint32_t));
+		if (index == NULL) {
+			return false;
+		}
+		*index = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ALWAYS_ON_TOP;
+	}
+	if (state & WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ON_ALL_WORKSPACES) {
+		uint32_t *index = wl_array_add(array, sizeof(uint32_t));
+		if (index == NULL) {
+			return false;
+		}
+		*index = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ON_ALL_WORKSPACES;
+	}
+	if (state & WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ROLLED_UP) {
+		uint32_t *index = wl_array_add(array, sizeof(uint32_t));
+		if (index == NULL) {
+			return false;
+		}
+		*index = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ROLLED_UP;
+	}
+	if (state & WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_URGENT) {
+		uint32_t *index = wl_array_add(array, sizeof(uint32_t));
+		if (index == NULL) {
+			return false;
+		}
+		*index = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_URGENT;
+	}
+
 	return true;
 }
 
 static void toplevel_send_state(struct wlr_foreign_toplevel_handle_v1 *toplevel) {
 	struct wl_array states;
+	uint32_t last_version = 0;
 	wl_array_init(&states);
-	bool r = fill_array_from_toplevel_state(&states, toplevel->state);
-	if (!r) {
-		struct wl_resource *resource;
-		wl_resource_for_each(resource, &toplevel->resources) {
-			wl_resource_post_no_memory(resource);
-		}
-
-		wl_array_release(&states);
-		return;
-	}
 
 	struct wl_resource *resource;
 	wl_resource_for_each(resource, &toplevel->resources) {
+		uint32_t version = wl_resource_get_version(resource);
+		if (version != last_version) {
+			/* Clients may have bound a version without FULLSCREEN state */
+			wl_array_release(&states);
+			wl_array_init(&states);
+			bool r = fill_array_from_toplevel_state(
+				&states, toplevel->state, version);
+			if (!r) {
+				wl_resource_post_no_memory(resource);
+				last_version = 0;
+				continue;
+			}
+			last_version = version;
+		}
+
 		zwlr_foreign_toplevel_handle_v1_send_state(resource, &states);
 	}
 
@@ -395,60 +516,59 @@ static void toplevel_send_state(struct wlr_foreign_toplevel_handle_v1 *toplevel)
 	toplevel_update_idle_source(toplevel);
 }
 
-void wlr_foreign_toplevel_handle_v1_set_maximized(
-		struct wlr_foreign_toplevel_handle_v1 *toplevel, bool maximized) {
-	if (maximized == !!(toplevel->state &
-			WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MAXIMIZED)) {
+static void set_state(struct wlr_foreign_toplevel_handle_v1 *toplevel,
+		bool new_state_val, enum wlr_foreign_toplevel_handle_v1_state state) {
+	if (new_state_val == !!(toplevel->state & state)) {
 		return;
 	}
-	if (maximized) {
-		toplevel->state |= WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MAXIMIZED;
+	if (new_state_val) {
+		toplevel->state |= state;
 	} else {
-		toplevel->state &= ~WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MAXIMIZED;
+		toplevel->state &= ~state;
 	}
 	toplevel_send_state(toplevel);
+}
+
+void wlr_foreign_toplevel_handle_v1_set_maximized(
+		struct wlr_foreign_toplevel_handle_v1 *toplevel, bool maximized) {
+	set_state(toplevel, maximized, WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MAXIMIZED);
 }
 
 void wlr_foreign_toplevel_handle_v1_set_minimized(
 		struct wlr_foreign_toplevel_handle_v1 *toplevel, bool minimized) {
-	if (minimized == !!(toplevel->state &
-			WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MINIMIZED)) {
-		return;
-	}
-	if (minimized) {
-		toplevel->state |= WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MINIMIZED;
-	} else {
-		toplevel->state &= ~WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MINIMIZED;
-	}
-	toplevel_send_state(toplevel);
+	set_state(toplevel, minimized, WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MINIMIZED);
 }
 
 void wlr_foreign_toplevel_handle_v1_set_activated(
 		struct wlr_foreign_toplevel_handle_v1 *toplevel, bool activated) {
-	if (activated == !!(toplevel->state &
-			WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED)) {
-		return;
-	}
-	if (activated) {
-		toplevel->state |= WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED;
-	} else {
-		toplevel->state &= ~WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED;
-	}
-	toplevel_send_state(toplevel);
+	set_state(toplevel, activated, WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED);
 }
 
 void wlr_foreign_toplevel_handle_v1_set_fullscreen(
 		struct wlr_foreign_toplevel_handle_v1 * toplevel, bool fullscreen) {
-	if (fullscreen == !!(toplevel->state &
-			WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN)) {
-		return;
-	}
-	if (fullscreen) {
-		toplevel->state |= WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN;
-	} else {
-		toplevel->state &= ~WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN;
-	}
-	toplevel_send_state(toplevel);
+	set_state(toplevel, fullscreen, WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN);
+}
+
+void wlr_foreign_toplevel_handle_v1_set_always_on_top(
+		struct wlr_foreign_toplevel_handle_v1 *toplevel, bool always_on_top) {
+	set_state(toplevel, always_on_top,
+		WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ALWAYS_ON_TOP);
+}
+
+void wlr_foreign_toplevel_handle_v1_set_on_all_workspaces(
+		struct wlr_foreign_toplevel_handle_v1 *toplevel, bool on_all_workspaces) {
+	set_state(toplevel, on_all_workspaces,
+		WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ON_ALL_WORKSPACES);
+}
+
+void wlr_foreign_toplevel_handle_v1_set_rolled_up(
+		struct wlr_foreign_toplevel_handle_v1 *toplevel, bool rolled_up) {
+	set_state(toplevel, rolled_up, WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ROLLED_UP);
+}
+
+void wlr_foreign_toplevel_handle_v1_set_urgent(
+		struct wlr_foreign_toplevel_handle_v1 *toplevel, bool urgent) {
+	set_state(toplevel, urgent, WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_URGENT);
 }
 
 static void toplevel_resource_send_parent(
@@ -574,6 +694,9 @@ wlr_foreign_toplevel_handle_v1_create(
 	wl_signal_init(&toplevel->events.request_activate);
 	wl_signal_init(&toplevel->events.request_fullscreen);
 	wl_signal_init(&toplevel->events.request_close);
+	wl_signal_init(&toplevel->events.request_always_on_top);
+	wl_signal_init(&toplevel->events.request_on_all_workspaces);
+	wl_signal_init(&toplevel->events.request_roll_up);
 	wl_signal_init(&toplevel->events.set_rectangle);
 	wl_signal_init(&toplevel->events.destroy);
 
@@ -625,7 +748,8 @@ static void toplevel_send_details_to_toplevel_resource(
 
 	struct wl_array states;
 	wl_array_init(&states);
-	bool r = fill_array_from_toplevel_state(&states, toplevel->state);
+	bool r = fill_array_from_toplevel_state(&states,
+		toplevel->state, wl_resource_get_version(resource));
 	if (!r) {
 		wl_resource_post_no_memory(resource);
 		wl_array_release(&states);
