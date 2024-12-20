@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <drm_fourcc.h>
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -14,6 +15,7 @@
 #include "render/drm_format_set.h"
 
 static const struct wlr_buffer_impl buffer_impl;
+static int (*_gbm_bo_get_fd_for_plane)(struct gbm_bo *bo, int plane);
 
 static struct wlr_gbm_buffer *get_gbm_buffer_from_buffer(
 		struct wlr_buffer *wlr_buffer) {
@@ -41,38 +43,36 @@ static bool export_gbm_bo(struct gbm_bo *bo,
 	int i;
 	int32_t handle = -1;
 	for (i = 0; i < attribs.n_planes; ++i) {
-#if HAVE_GBM_BO_GET_FD_FOR_PLANE
-		(void)handle;
+		if (_gbm_bo_get_fd_for_plane != NULL) {
+			attribs.fd[i] = _gbm_bo_get_fd_for_plane(bo, i);
+			if (attribs.fd[i] < 0) {
+				wlr_log(WLR_ERROR, "gbm_bo_get_fd_for_plane failed");
+				goto error_fd;
+			}
+		} else {
+			// GBM is lacking a function to get a FD for a given plane. Instead,
+			// check all planes have the same handle. We can't use
+			// drmPrimeHandleToFD because that messes up handle ref'counting in
+			// the user-space driver.
+			union gbm_bo_handle plane_handle = gbm_bo_get_handle_for_plane(bo, i);
+			if (plane_handle.s32 < 0) {
+				wlr_log(WLR_ERROR, "gbm_bo_get_handle_for_plane failed");
+				goto error_fd;
+			}
+			if (i == 0) {
+				handle = plane_handle.s32;
+			} else if (plane_handle.s32 != handle) {
+				wlr_log(WLR_ERROR, "Failed to export GBM BO: "
+					"all planes don't have the same GEM handle");
+				goto error_fd;
+			}
 
-		attribs.fd[i] = gbm_bo_get_fd_for_plane(bo, i);
-		if (attribs.fd[i] < 0) {
-			wlr_log(WLR_ERROR, "gbm_bo_get_fd_for_plane failed");
-			goto error_fd;
+			attribs.fd[i] = gbm_bo_get_fd(bo);
+			if (attribs.fd[i] < 0) {
+				wlr_log(WLR_ERROR, "gbm_bo_get_fd failed");
+				goto error_fd;
+			}
 		}
-#else
-		// GBM is lacking a function to get a FD for a given plane. Instead,
-		// check all planes have the same handle. We can't use
-		// drmPrimeHandleToFD because that messes up handle ref'counting in
-		// the user-space driver.
-		union gbm_bo_handle plane_handle = gbm_bo_get_handle_for_plane(bo, i);
-		if (plane_handle.s32 < 0) {
-			wlr_log(WLR_ERROR, "gbm_bo_get_handle_for_plane failed");
-			goto error_fd;
-		}
-		if (i == 0) {
-			handle = plane_handle.s32;
-		} else if (plane_handle.s32 != handle) {
-			wlr_log(WLR_ERROR, "Failed to export GBM BO: "
-				"all planes don't have the same GEM handle");
-			goto error_fd;
-		}
-
-		attribs.fd[i] = gbm_bo_get_fd(bo);
-		if (attribs.fd[i] < 0) {
-			wlr_log(WLR_ERROR, "gbm_bo_get_fd failed");
-			goto error_fd;
-		}
-#endif
 
 		attribs.offset[i] = gbm_bo_get_offset(bo, i);
 		attribs.stride[i] = gbm_bo_get_stride_for_plane(bo, i);
@@ -209,6 +209,11 @@ struct wlr_allocator *wlr_gbm_allocator_create(int fd) {
 		wlr_log(WLR_ERROR, "gbm_create_device failed");
 		free(alloc);
 		return NULL;
+	}
+
+	_gbm_bo_get_fd_for_plane = dlsym(RTLD_DEFAULT, "gbm_bo_get_fd_for_plane");
+	if (_gbm_bo_get_fd_for_plane == NULL) {
+		wlr_log(WLR_DEBUG, "gbm_bo_get_fd_for_plane not supported");
 	}
 
 	wlr_log(WLR_DEBUG, "Created GBM allocator with backend %s",
