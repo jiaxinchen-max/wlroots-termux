@@ -195,6 +195,10 @@ static struct wlr_buffer *render_cursor_buffer(struct wlr_output_cursor *cursor)
 		size_t sizes_len = 0;
 		const struct wlr_output_cursor_size *sizes =
 			output->impl->get_cursor_sizes(cursor->output, &sizes_len);
+		if (sizes_len == 0) {
+			wlr_log(WLR_DEBUG, "Hardware cursor not supported");
+			return NULL;
+		}
 
 		bool found = false;
 		for (size_t i = 0; i < sizes_len; i++) {

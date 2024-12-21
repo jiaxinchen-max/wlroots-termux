@@ -47,6 +47,13 @@ static const char *const atom_map[ATOM_LAST] = {
 	[NET_WM_STATE_MAXIMIZED_VERT] = "_NET_WM_STATE_MAXIMIZED_VERT",
 	[NET_WM_STATE_MAXIMIZED_HORZ] = "_NET_WM_STATE_MAXIMIZED_HORZ",
 	[NET_WM_STATE_HIDDEN] = "_NET_WM_STATE_HIDDEN",
+	[NET_WM_STATE_STICKY] = "_NET_WM_STATE_STICKY",
+	[NET_WM_STATE_SHADED] = "_NET_WM_STATE_SHADED",
+	[NET_WM_STATE_SKIP_TASKBAR] = "_NET_WM_STATE_SKIP_TASKBAR",
+	[NET_WM_STATE_SKIP_PAGER] = "_NET_WM_STATE_SKIP_PAGER",
+	[NET_WM_STATE_ABOVE] = "_NET_WM_STATE_ABOVE",
+	[NET_WM_STATE_BELOW] = "_NET_WM_STATE_BELOW",
+	[NET_WM_STATE_DEMANDS_ATTENTION] = "_NET_WM_STATE_DEMANDS_ATTENTION",
 	[NET_WM_PING] = "_NET_WM_PING",
 	[WM_CHANGE_STATE] = "WM_CHANGE_STATE",
 	[WM_STATE] = "WM_STATE",
@@ -211,6 +218,13 @@ static struct wlr_xwayland_surface *xwayland_surface_create(
 	wl_signal_init(&surface->events.request_fullscreen);
 	wl_signal_init(&surface->events.request_activate);
 	wl_signal_init(&surface->events.request_close);
+	wl_signal_init(&surface->events.request_sticky);
+	wl_signal_init(&surface->events.request_shaded);
+	wl_signal_init(&surface->events.request_skip_taskbar);
+	wl_signal_init(&surface->events.request_skip_pager);
+	wl_signal_init(&surface->events.request_above);
+	wl_signal_init(&surface->events.request_below);
+	wl_signal_init(&surface->events.request_demands_attention);
 	wl_signal_init(&surface->events.associate);
 	wl_signal_init(&surface->events.dissociate);
 	wl_signal_init(&surface->events.set_class);
@@ -269,8 +283,7 @@ static void xwm_set_net_active_window(struct wlr_xwm *xwm,
  */
 xcb_void_cookie_t xwm_send_event_with_size(xcb_connection_t *c,
 		uint8_t propagate, xcb_window_t destination,
-		uint32_t event_mask, const void *event, uint32_t length)
-{
+		uint32_t event_mask, const void *event, uint32_t length) {
 	if (length == 32) {
 		return xcb_send_event(c, propagate, destination, event_mask, event);
 	} else if (length < 32) {
@@ -474,7 +487,7 @@ static void xsurface_set_net_wm_state(struct wlr_xwayland_surface *xsurface) {
 		return;
 	}
 
-	uint32_t property[6];
+	uint32_t property[13];
 	size_t i = 0;
 	if (xsurface->modal) {
 		property[i++] = xwm->atoms[NET_WM_STATE_MODAL];
@@ -490,6 +503,27 @@ static void xsurface_set_net_wm_state(struct wlr_xwayland_surface *xsurface) {
 	}
 	if (xsurface->minimized) {
 		property[i++] = xwm->atoms[NET_WM_STATE_HIDDEN];
+	}
+	if (xsurface->sticky) {
+		property[i++] = xwm->atoms[NET_WM_STATE_STICKY];
+	}
+	if (xsurface->shaded) {
+		property[i++] = xwm->atoms[NET_WM_STATE_SHADED];
+	}
+	if (xsurface->skip_taskbar) {
+		property[i++] = xwm->atoms[NET_WM_STATE_SKIP_TASKBAR];
+	}
+	if (xsurface->skip_pager) {
+		property[i++] = xwm->atoms[NET_WM_STATE_SKIP_PAGER];
+	}
+	if (xsurface->above) {
+		property[i++] = xwm->atoms[NET_WM_STATE_ABOVE];
+	}
+	if (xsurface->below) {
+		property[i++] = xwm->atoms[NET_WM_STATE_BELOW];
+	}
+	if (xsurface->demands_attention) {
+		property[i++] = xwm->atoms[NET_WM_STATE_DEMANDS_ATTENTION];
 	}
 	if (xsurface == xwm->focus_surface) {
 		property[i++] = xwm->atoms[NET_WM_STATE_FOCUSED];
@@ -886,6 +920,20 @@ static void read_surface_net_wm_state(struct wlr_xwm *xwm,
 			xsurface->maximized_horz = true;
 		} else if (atom[i] == xwm->atoms[NET_WM_STATE_HIDDEN]) {
 			xsurface->minimized = true;
+		} else if (atom[i] == xwm->atoms[NET_WM_STATE_STICKY]) {
+			xsurface->sticky = true;
+		} else if (atom[i] == xwm->atoms[NET_WM_STATE_SHADED]) {
+			xsurface->shaded = true;
+		} else if (atom[i] == xwm->atoms[NET_WM_STATE_SKIP_TASKBAR]) {
+			xsurface->skip_taskbar = true;
+		} else if (atom[i] == xwm->atoms[NET_WM_STATE_SKIP_PAGER]) {
+			xsurface->skip_pager = true;
+		} else if (atom[i] == xwm->atoms[NET_WM_STATE_ABOVE]) {
+			xsurface->above = true;
+		} else if (atom[i] == xwm->atoms[NET_WM_STATE_BELOW]) {
+			xsurface->below = true;
+		} else if (atom[i] == xwm->atoms[NET_WM_STATE_DEMANDS_ATTENTION]) {
+			xsurface->demands_attention = true;
 		}
 	}
 }
@@ -1412,6 +1460,13 @@ static void xwm_handle_net_wm_state_message(struct wlr_xwm *xwm,
 	bool maximized_vert = xsurface->maximized_vert;
 	bool maximized_horz = xsurface->maximized_horz;
 	bool minimized = xsurface->minimized;
+	bool sticky = xsurface->sticky;
+	bool shaded = xsurface->shaded;
+	bool skip_taskbar = xsurface->skip_taskbar;
+	bool skip_pager = xsurface->skip_pager;
+	bool above = xsurface->above;
+	bool below = xsurface->below;
+	bool demands_attention = xsurface->demands_attention;
 
 	uint32_t action = client_message->data.data32[0];
 	for (size_t i = 0; i < 2; ++i) {
@@ -1428,6 +1483,20 @@ static void xwm_handle_net_wm_state_message(struct wlr_xwm *xwm,
 			changed = update_state(action, &xsurface->maximized_horz);
 		} else if (property == xwm->atoms[NET_WM_STATE_HIDDEN]) {
 			changed = update_state(action, &xsurface->minimized);
+		} else if (property == xwm->atoms[NET_WM_STATE_STICKY]) {
+			changed = update_state(action, &xsurface->sticky);
+		} else if (property == xwm->atoms[NET_WM_STATE_SHADED]) {
+			changed = update_state(action, &xsurface->shaded);
+		} else if (property == xwm->atoms[NET_WM_STATE_SKIP_TASKBAR]) {
+			changed = update_state(action, &xsurface->skip_taskbar);
+		} else if (property == xwm->atoms[NET_WM_STATE_SKIP_PAGER]) {
+			changed = update_state(action, &xsurface->skip_pager);
+		} else if (property == xwm->atoms[NET_WM_STATE_ABOVE]) {
+			changed = update_state(action, &xsurface->above);
+		} else if (property == xwm->atoms[NET_WM_STATE_BELOW]) {
+			changed = update_state(action, &xsurface->below);
+		} else if (property == xwm->atoms[NET_WM_STATE_DEMANDS_ATTENTION]) {
+			changed = update_state(action, &xsurface->demands_attention);
 		} else if (property != XCB_ATOM_NONE && wlr_log_get_verbosity() >= WLR_DEBUG) {
 			char *prop_name = xwm_get_atom_name(xwm, property);
 			wlr_log(WLR_DEBUG, "Unhandled NET_WM_STATE property change "
@@ -1457,6 +1526,34 @@ static void xwm_handle_net_wm_state_message(struct wlr_xwm *xwm,
 			.minimize = xsurface->minimized,
 		};
 		wl_signal_emit_mutable(&xsurface->events.request_minimize, &minimize_event);
+	}
+
+	if (sticky != xsurface->sticky) {
+		wl_signal_emit_mutable(&xsurface->events.request_sticky, NULL);
+	}
+
+	if (shaded != xsurface->shaded) {
+		wl_signal_emit_mutable(&xsurface->events.request_shaded, NULL);
+	}
+
+	if (skip_taskbar != xsurface->skip_taskbar) {
+		wl_signal_emit_mutable(&xsurface->events.request_skip_taskbar, NULL);
+	}
+
+	if (skip_pager != xsurface->skip_pager) {
+		wl_signal_emit_mutable(&xsurface->events.request_skip_pager, NULL);
+	}
+
+	if (above != xsurface->above) {
+		wl_signal_emit_mutable(&xsurface->events.request_above, NULL);
+	}
+
+	if (below != xsurface->below) {
+		wl_signal_emit_mutable(&xsurface->events.request_below, NULL);
+	}
+
+	if (demands_attention != xsurface->demands_attention) {
+		wl_signal_emit_mutable(&xsurface->events.request_demands_attention, NULL);
 	}
 }
 
@@ -2326,6 +2423,13 @@ struct wlr_xwm *xwm_create(struct wlr_xwayland *xwayland, int wm_fd) {
 		xwm->atoms[NET_WM_STATE_MAXIMIZED_VERT],
 		xwm->atoms[NET_WM_STATE_MAXIMIZED_HORZ],
 		xwm->atoms[NET_WM_STATE_HIDDEN],
+		xwm->atoms[NET_WM_STATE_STICKY],
+		xwm->atoms[NET_WM_STATE_SHADED],
+		xwm->atoms[NET_WM_STATE_SKIP_TASKBAR],
+		xwm->atoms[NET_WM_STATE_SKIP_PAGER],
+		xwm->atoms[NET_WM_STATE_ABOVE],
+		xwm->atoms[NET_WM_STATE_BELOW],
+		xwm->atoms[NET_WM_STATE_DEMANDS_ATTENTION],
 		xwm->atoms[NET_CLIENT_LIST],
 		xwm->atoms[NET_CLIENT_LIST_STACKING],
 	};
@@ -2402,6 +2506,51 @@ void wlr_xwayland_surface_set_maximized(struct wlr_xwayland_surface *surface,
 void wlr_xwayland_surface_set_fullscreen(struct wlr_xwayland_surface *surface,
 		bool fullscreen) {
 	surface->fullscreen = fullscreen;
+	xsurface_set_net_wm_state(surface);
+	xwm_schedule_flush(surface->xwm);
+}
+
+void wlr_xwayland_surface_set_sticky(struct wlr_xwayland_surface *surface, bool sticky) {
+	surface->sticky = sticky;
+	xsurface_set_net_wm_state(surface);
+	xwm_schedule_flush(surface->xwm);
+}
+
+void wlr_xwayland_surface_set_shaded(struct wlr_xwayland_surface *surface, bool shaded) {
+	surface->shaded = shaded;
+	xsurface_set_net_wm_state(surface);
+	xwm_schedule_flush(surface->xwm);
+}
+
+void wlr_xwayland_surface_set_skip_taskbar(struct wlr_xwayland_surface *surface,
+		bool skip_taskbar) {
+	surface->skip_taskbar = skip_taskbar;
+	xsurface_set_net_wm_state(surface);
+	xwm_schedule_flush(surface->xwm);
+}
+
+void wlr_xwayland_surface_set_skip_pager(struct wlr_xwayland_surface *surface,
+		bool skip_pager) {
+	surface->skip_pager = skip_pager;
+	xsurface_set_net_wm_state(surface);
+	xwm_schedule_flush(surface->xwm);
+}
+
+void wlr_xwayland_surface_set_above(struct wlr_xwayland_surface *surface, bool above) {
+	surface->above = above;
+	xsurface_set_net_wm_state(surface);
+	xwm_schedule_flush(surface->xwm);
+}
+
+void wlr_xwayland_surface_set_below(struct wlr_xwayland_surface *surface, bool below) {
+	surface->below = below;
+	xsurface_set_net_wm_state(surface);
+	xwm_schedule_flush(surface->xwm);
+}
+
+void wlr_xwayland_surface_set_demands_attention(struct wlr_xwayland_surface *surface,
+		bool demands_attention) {
+	surface->demands_attention = demands_attention;
 	xsurface_set_net_wm_state(surface);
 	xwm_schedule_flush(surface->xwm);
 }
