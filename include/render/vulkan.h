@@ -163,6 +163,7 @@ enum wlr_vk_shader_source {
 enum wlr_vk_output_transform {
 	WLR_VK_OUTPUT_TRANSFORM_INVERSE_SRGB = 0,
 	WLR_VK_OUTPUT_TRANSFORM_LUT3D = 1,
+	WLR_VK_OUTPUT_TRANSFORM_LUT3x1D = 2,
 };
 
 struct wlr_vk_pipeline_key {
@@ -193,6 +194,7 @@ struct wlr_vk_render_format_setup {
 
 	VkPipeline output_pipe_srgb;
 	VkPipeline output_pipe_lut3d;
+	VkPipeline output_pipe_lut3x1d;
 
 	struct wlr_vk_renderer *renderer;
 	struct wl_list pipelines; // struct wlr_vk_pipeline.link
@@ -271,7 +273,9 @@ struct wlr_vk_renderer {
 	VkShaderModule vert_module;
 	VkShaderModule tex_frag_module;
 	VkShaderModule quad_frag_module;
-	VkShaderModule output_module;
+	VkShaderModule output_module_srgb;
+	VkShaderModule output_module_3d_lut;
+	VkShaderModule output_module_3x1d_lut;
 
 	struct wl_list pipeline_layouts; // struct wlr_vk_pipeline_layout.link
 
@@ -280,18 +284,9 @@ struct wlr_vk_renderer {
 	VkDescriptorSetLayout output_ds_srgb_layout;
 	VkDescriptorSetLayout output_ds_lut3d_layout;
 	VkSampler output_sampler_lut3d;
-	// descriptor set indicating dummy 1x1x1 image, for use in the lut3d slot
-	VkDescriptorSet output_ds_lut3d_dummy;
-	struct wlr_vk_descriptor_pool *output_ds_lut3d_dummy_pool;
 
 	size_t last_output_pool_size;
 	struct wl_list output_descriptor_pools; // wlr_vk_descriptor_pool.link
-
-	// dummy sampler to bind when output shader is not using a lookup table
-	VkImage dummy3d_image;
-	VkDeviceMemory dummy3d_mem;
-	VkImageView dummy3d_image_view;
-	bool dummy3d_image_transitioned;
 
 	VkSemaphore timeline_semaphore;
 	uint64_t timeline_point;
@@ -521,7 +516,7 @@ struct wlr_vk_color_transform {
 		VkDeviceMemory memory;
 		VkDescriptorSet ds;
 		struct wlr_vk_descriptor_pool *ds_pool;
-	} lut_3d;
+	} lut;
 };
 void vk_color_transform_destroy(struct wlr_addon *addon);
 
