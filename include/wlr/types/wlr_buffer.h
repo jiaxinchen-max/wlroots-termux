@@ -172,4 +172,13 @@ struct wlr_client_buffer {
  */
 struct wlr_client_buffer *wlr_client_buffer_get(struct wlr_buffer *buffer);
 
+/**
+ * If `buffer` is a wlr_single_pixel_buffer_v1 then retrieve the SPB's color
+ * and return true.  Otherwise, returns false.  The color is formatted as
+ * {R, G, B, A} where the maximum value of each component is UINT32_MAX.
+ */
+bool wlr_single_pixel_buffer_color_from_buffer(
+	struct wlr_buffer *wlr_buffer, uint32_t color[static 4]);
+
+
 #endif
