@@ -76,6 +76,11 @@ Install like so:
 
 See [CONTRIBUTING.md].
 
+## Release policy
+
+Each major wlroots release is supported until the next major release. We ship
+bugfix releases.
+
 [Wayland]: https://wayland.freedesktop.org/
 [wiki]: https://gitlab.freedesktop.org/wlroots/wlroots/-/wikis/Getting-started
 [#wlroots on Libera Chat]: https://web.libera.chat/gamja/?channels=#wlroots
