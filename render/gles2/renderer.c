@@ -418,7 +418,28 @@ static GLuint compile_shader(struct wlr_gles2_renderer *renderer,
 	GLint ok;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
 	if (ok == GL_FALSE) {
-		wlr_log(WLR_ERROR, "Failed to compile shader");
+		GLint length = 0;
+		const char *shader_type_str;
+		switch (type) {
+		case GL_VERTEX_SHADER:
+			shader_type_str = "vertex";
+			break;
+		case GL_FRAGMENT_SHADER:
+			shader_type_str = "fragment";
+			break;
+		default:
+			shader_type_str = "unknown";
+			break;
+		}
+
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+		if (length > 0) {
+			char message[length];
+			glGetShaderInfoLog(shader, length, NULL, message);
+			wlr_log(WLR_ERROR, "Failed to compile %s shader: %s", shader_type_str, message);
+		} else {
+			wlr_log(WLR_ERROR, "Failed to compile %s shader", shader_type_str);
+		}
 		glDeleteShader(shader);
 		shader = 0;
 	}
