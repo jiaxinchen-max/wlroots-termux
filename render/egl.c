@@ -312,17 +312,6 @@ static bool egl_init_display(struct wlr_egl *egl, EGLDisplay display) {
 			return false;
 		}
 
-		if (check_egl_ext(device_exts_str, "EGL_MESA_device_software")) {
-			if (env_parse_bool("WLR_RENDERER_ALLOW_SOFTWARE")) {
-				wlr_log(WLR_INFO, "Using software rendering");
-			} else {
-				wlr_log(WLR_ERROR, "Software rendering detected, please use "
-					"the WLR_RENDERER_ALLOW_SOFTWARE environment variable "
-					"to proceed");
-				return false;
-			}
-		}
-
 #ifdef EGL_DRIVER_NAME_EXT
 		if (check_egl_ext(device_exts_str, "EGL_EXT_device_persistent_id")) {
 			driver_name = egl->procs.eglQueryDeviceStringEXT(egl->device,
@@ -334,6 +323,20 @@ static bool egl_init_display(struct wlr_egl *egl, EGLDisplay display) {
 			check_egl_ext(device_exts_str, "EGL_EXT_device_drm");
 		egl->exts.EXT_device_drm_render_node =
 			check_egl_ext(device_exts_str, "EGL_EXT_device_drm_render_node");
+
+		// The only way a non-DRM device is selected is when the user
+		// explicitly picks software rendering
+		if (check_egl_ext(device_exts_str, "EGL_MESA_device_software") &&
+				egl->exts.EXT_device_drm) {
+			if (env_parse_bool("WLR_RENDERER_ALLOW_SOFTWARE")) {
+				wlr_log(WLR_INFO, "Using software rendering");
+			} else {
+				wlr_log(WLR_ERROR, "Software rendering detected, please use "
+					"the WLR_RENDERER_ALLOW_SOFTWARE environment variable "
+					"to proceed");
+				return false;
+			}
+		}
 	}
 
 	if (!check_egl_ext(display_exts_str, "EGL_KHR_no_config_context") &&
@@ -480,30 +483,51 @@ static EGLDeviceEXT get_egl_device_from_drm_fd(struct wlr_egl *egl,
 		return EGL_NO_DEVICE_EXT;
 	}
 
-	drmDevice *device = NULL;
-	int ret = drmGetDevice(drm_fd, &device);
-	if (ret < 0) {
-		wlr_log(WLR_ERROR, "Failed to get DRM device: %s", strerror(-ret));
-		free(devices);
-		return EGL_NO_DEVICE_EXT;
+	drmDevice *selected_drm_device = NULL;
+	if (drm_fd >= 0) {
+		int ret = drmGetDevice(drm_fd, &selected_drm_device);
+		if (ret < 0) {
+			wlr_log(WLR_ERROR, "Failed to get DRM device: %s", strerror(-ret));
+			free(devices);
+			return EGL_NO_DEVICE_EXT;
+		}
 	}
 
 	EGLDeviceEXT egl_device = NULL;
 	for (int i = 0; i < nb_devices; i++) {
-		const char *egl_device_name = egl->procs.eglQueryDeviceStringEXT(
-				devices[i], EGL_DRM_DEVICE_FILE_EXT);
-		if (egl_device_name == NULL) {
+		const char *device_exts_str = egl->procs.eglQueryDeviceStringEXT(devices[i], EGL_EXTENSIONS);
+		if (device_exts_str == NULL) {
+			wlr_log(WLR_ERROR, "eglQueryDeviceStringEXT(EGL_EXTENSIONS) failed");
 			continue;
 		}
 
-		if (device_has_name(device, egl_device_name)) {
-			wlr_log(WLR_DEBUG, "Using EGL device %s", egl_device_name);
+		const char *egl_device_name = NULL;
+		if (check_egl_ext(device_exts_str, "EGL_EXT_device_drm")) {
+			egl_device_name = egl->procs.eglQueryDeviceStringEXT(devices[i], EGL_DRM_DEVICE_FILE_EXT);
+			if (egl_device_name == NULL) {
+				wlr_log(WLR_ERROR, "eglQueryDeviceStringEXT(EGL_DRM_DEVICE_FILE_EXT) failed");
+				continue;
+			}
+		}
+
+		bool is_software = check_egl_ext(device_exts_str, "EGL_MESA_device_software");
+
+		bool found;
+		if (selected_drm_device != NULL) {
+			found = egl_device_name != NULL && device_has_name(selected_drm_device, egl_device_name);
+		} else {
+			found = is_software;
+		}
+		if (found) {
+			if (egl_device_name != NULL) {
+				wlr_log(WLR_DEBUG, "Using EGL device %s", egl_device_name);
+			}
 			egl_device = devices[i];
 			break;
 		}
 	}
 
-	drmFreeDevice(&device);
+	drmFreeDevice(&selected_drm_device);
 	free(devices);
 
 	return egl_device;
@@ -556,7 +580,7 @@ struct wlr_egl *wlr_egl_create_with_drm_fd(int drm_fd) {
 		wlr_log(WLR_DEBUG, "EXT_platform_device not supported");
 	}
 
-	if (egl->exts.KHR_platform_gbm) {
+	if (egl->exts.KHR_platform_gbm && drm_fd >= 0) {
 		int gbm_fd = open_render_node(drm_fd);
 		if (gbm_fd < 0) {
 			wlr_log(WLR_ERROR, "Failed to open DRM render node");

@@ -74,6 +74,7 @@ features = {
 	'gles2-renderer': false,
 	'vulkan-renderer': false,
 	'gbm-allocator': false,
+	'udmabuf-allocator': false,
 	'session': false,
 	'color-management': false,
 }

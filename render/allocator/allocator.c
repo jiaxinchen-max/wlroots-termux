@@ -17,6 +17,10 @@
 #include "render/allocator/gbm.h"
 #endif
 
+#if WLR_HAS_UDMABUF_ALLOCATOR
+#include "render/allocator/udmabuf.h"
+#endif
+
 void wlr_allocator_init(struct wlr_allocator *alloc,
 		const struct wlr_allocator_interface *impl, uint32_t buffer_caps) {
 	assert(impl && impl->destroy && impl->create_buffer);
@@ -144,6 +148,20 @@ struct wlr_allocator *wlr_allocator_autocreate(struct wlr_backend *backend,
 		}
 		close(dumb_fd);
 		wlr_log(WLR_DEBUG, "Failed to create drm dumb allocator");
+	}
+
+	uint32_t udmabuf_caps = WLR_BUFFER_CAP_DMABUF | WLR_BUFFER_CAP_SHM;
+	if ((backend_caps & udmabuf_caps) && (renderer_caps & udmabuf_caps) &&
+			drm_fd < 0) {
+#if WLR_HAS_UDMABUF_ALLOCATOR
+		wlr_log(WLR_DEBUG, "Trying udmabuf allocator");
+		if ((alloc = wlr_udmabuf_allocator_create()) != NULL) {
+			return alloc;
+		}
+		wlr_log(WLR_DEBUG, "Failed to create udmabuf allocator");
+#else
+		wlr_log(WLR_DEBUG, "Skipping udmabuf allocator: disabled at compile-time");
+#endif
 	}
 
 	wlr_log(WLR_ERROR, "Failed to create allocator");

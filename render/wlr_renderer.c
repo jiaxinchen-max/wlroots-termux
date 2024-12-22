@@ -143,6 +143,12 @@ static bool open_preferred_drm_fd(struct wlr_backend *backend, int *drm_fd_ptr,
 		return true;
 	}
 
+	if (env_parse_bool("WLR_RENDERER_FORCE_SOFTWARE")) {
+		*drm_fd_ptr = -1;
+		*own_drm_fd = false;
+		return true;
+	}
+
 	// Allow the user to override the render node
 	const char *render_name = getenv("WLR_RENDER_DRM_DEVICE");
 	if (render_name != NULL) {

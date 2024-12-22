@@ -274,7 +274,7 @@ VkPhysicalDevice vulkan_find_drm_phdev(struct wlr_vk_instance *ini, int drm_fd) 
 	}
 
 	struct stat drm_stat = {0};
-	if (fstat(drm_fd, &drm_stat) != 0) {
+	if (drm_fd >= 0 && fstat(drm_fd, &drm_stat) != 0) {
 		wlr_log_errno(WLR_ERROR, "fstat failed");
 		return VK_NULL_HANDLE;
 	}
@@ -344,17 +344,23 @@ VkPhysicalDevice vulkan_find_drm_phdev(struct wlr_vk_instance *ini, int drm_fd) 
 			wlr_log(WLR_INFO, "  Driver name: %s (%s)", driver_props.driverName, driver_props.driverInfo);
 		}
 
-		if (!has_drm_props) {
-			wlr_log(WLR_DEBUG, "  Ignoring physical device \"%s\": "
-				"VK_EXT_physical_device_drm not supported",
-				phdev_props.deviceName);
-			continue;
+		bool found;
+		if (drm_fd >= 0) {
+			if (!has_drm_props) {
+				wlr_log(WLR_DEBUG, "  Ignoring physical device \"%s\": "
+					"VK_EXT_physical_device_drm not supported",
+					phdev_props.deviceName);
+				continue;
+			}
+
+			dev_t primary_devid = makedev(drm_props.primaryMajor, drm_props.primaryMinor);
+			dev_t render_devid = makedev(drm_props.renderMajor, drm_props.renderMinor);
+			found = primary_devid == drm_stat.st_rdev || render_devid == drm_stat.st_rdev;
+		} else {
+			found = phdev_props.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
 		}
 
-		dev_t primary_devid = makedev(drm_props.primaryMajor, drm_props.primaryMinor);
-		dev_t render_devid = makedev(drm_props.renderMajor, drm_props.renderMinor);
-		if (primary_devid == drm_stat.st_rdev ||
-				render_devid == drm_stat.st_rdev) {
+		if (found) {
 			wlr_log(WLR_INFO, "Found matching Vulkan physical device: %s",
 				phdev_props.deviceName);
 			return phdev;
@@ -382,7 +388,7 @@ int vulkan_open_phdev_drm_fd(VkPhysicalDevice phdev) {
 	} else if (drm_props.hasPrimary) {
 		devid = makedev(drm_props.primaryMajor, drm_props.primaryMinor);
 	} else {
-		wlr_log(WLR_ERROR, "Physical device is missing both render and primary nodes");
+		wlr_log(WLR_INFO, "Physical device is missing both render and primary nodes");
 		return -1;
 	}
 
