@@ -8,6 +8,7 @@ project(
 		'c_std=' + (meson.version().version_compare('>=1.4.0') ? 'c23,c11' : 'c11'),
 		'warning_level=2',
 		'werror=true',
+		'wrap_mode=nodownload',
 	],
 )
 
