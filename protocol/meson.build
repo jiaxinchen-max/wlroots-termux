@@ -35,6 +35,7 @@ protocols = {
 	'security-context-v1': wl_protocol_dir / 'staging/security-context/security-context-v1.xml',
 	'single-pixel-buffer-v1': wl_protocol_dir / 'staging/single-pixel-buffer/single-pixel-buffer-v1.xml',
 	'xdg-activation-v1': wl_protocol_dir / 'staging/xdg-activation/xdg-activation-v1.xml',
+	'xdg-dialog-v1': wl_protocol_dir / 'staging/xdg-dialog/xdg-dialog-v1.xml',
 	'xdg-system-bell-v1': wl_protocol_dir / 'staging/xdg-system-bell/xdg-system-bell-v1.xml',
 	'xwayland-shell-v1': wl_protocol_dir / 'staging/xwayland-shell/xwayland-shell-v1.xml',
 	'tearing-control-v1': wl_protocol_dir / 'staging/tearing-control/tearing-control-v1.xml',
