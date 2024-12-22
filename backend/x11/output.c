@@ -94,6 +94,8 @@ static void output_destroy(struct wlr_output *wlr_output) {
 	struct wlr_x11_output *output = get_x11_output_from_output(wlr_output);
 	struct wlr_x11_backend *x11 = output->x11;
 
+	wlr_output_finish(wlr_output);
+
 	pixman_region32_fini(&output->exposed);
 
 	wlr_pointer_finish(&output->pointer);

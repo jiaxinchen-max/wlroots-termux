@@ -22,15 +22,17 @@ void wlr_buffer_init(struct wlr_buffer *buffer,
 	wlr_addon_set_init(&buffer->addons);
 }
 
+void wlr_buffer_finish(struct wlr_buffer *buffer) {
+	wl_signal_emit_mutable(&buffer->events.destroy, NULL);
+	wlr_addon_set_finish(&buffer->addons);
+}
+
 static void buffer_consider_destroy(struct wlr_buffer *buffer) {
 	if (!buffer->dropped || buffer->n_locks > 0) {
 		return;
 	}
 
 	assert(!buffer->accessing_data_ptr);
-
-	wl_signal_emit_mutable(&buffer->events.destroy, NULL);
-	wlr_addon_set_finish(&buffer->addons);
 
 	buffer->impl->destroy(buffer);
 }

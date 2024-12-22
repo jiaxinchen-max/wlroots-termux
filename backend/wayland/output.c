@@ -933,6 +933,8 @@ static void output_destroy(struct wlr_output *wlr_output) {
 		return;
 	}
 
+	wlr_output_finish(wlr_output);
+
 	wl_list_remove(&output->link);
 
 	if (output->cursor.surface) {

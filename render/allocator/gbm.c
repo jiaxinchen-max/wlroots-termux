@@ -155,8 +155,10 @@ static struct wlr_gbm_buffer *create_buffer(struct wlr_gbm_allocator *alloc,
 }
 
 static void buffer_destroy(struct wlr_buffer *wlr_buffer) {
-	struct wlr_gbm_buffer *buffer =
-		get_gbm_buffer_from_buffer(wlr_buffer);
+	struct wlr_gbm_buffer *buffer = get_gbm_buffer_from_buffer(wlr_buffer);
+
+	wlr_buffer_finish(wlr_buffer);
+
 	wlr_dmabuf_attributes_finish(&buffer->dmabuf);
 	if (buffer->gbm_bo != NULL) {
 		gbm_bo_destroy(buffer->gbm_bo);

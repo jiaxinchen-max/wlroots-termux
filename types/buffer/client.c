@@ -24,6 +24,9 @@ static struct wlr_client_buffer *client_buffer_from_buffer(
 
 static void client_buffer_destroy(struct wlr_buffer *buffer) {
 	struct wlr_client_buffer *client_buffer = client_buffer_from_buffer(buffer);
+
+	wlr_buffer_finish(buffer);
+
 	wl_list_remove(&client_buffer->source_destroy.link);
 	wl_list_remove(&client_buffer->renderer_destroy.link);
 	wlr_texture_destroy(client_buffer->texture);

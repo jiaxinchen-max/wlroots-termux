@@ -375,11 +375,7 @@ void wlr_output_init(struct wlr_output *output, struct wlr_backend *backend,
 	}
 }
 
-void wlr_output_destroy(struct wlr_output *output) {
-	if (!output) {
-		return;
-	}
-
+void wlr_output_finish(struct wlr_output *output) {
 	wl_signal_emit_mutable(&output->events.destroy, output);
 
 	wlr_output_destroy_global(output);
@@ -418,10 +414,17 @@ void wlr_output_destroy(struct wlr_output *output) {
 	free(output->make);
 	free(output->model);
 	free(output->serial);
+}
+
+void wlr_output_destroy(struct wlr_output *output) {
+	if (!output) {
+		return;
+	}
 
 	if (output->impl && output->impl->destroy) {
 		output->impl->destroy(output);
 	} else {
+		wlr_output_finish(output);
 		free(output);
 	}
 }

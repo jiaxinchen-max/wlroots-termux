@@ -100,11 +100,14 @@ static struct wlr_dmabuf_v1_buffer *dmabuf_v1_buffer_from_buffer(
 static void buffer_destroy(struct wlr_buffer *wlr_buffer) {
 	struct wlr_dmabuf_v1_buffer *buffer =
 		dmabuf_v1_buffer_from_buffer(wlr_buffer);
+	wl_list_remove(&buffer->release.link);
+
+	wlr_buffer_finish(wlr_buffer);
+
 	if (buffer->resource != NULL) {
 		wl_resource_set_user_data(buffer->resource, NULL);
 	}
 	wlr_dmabuf_attributes_finish(&buffer->attributes);
-	wl_list_remove(&buffer->release.link);
 	free(buffer);
 }
 

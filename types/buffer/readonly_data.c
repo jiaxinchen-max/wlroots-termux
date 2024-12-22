@@ -17,6 +17,7 @@ static struct wlr_readonly_data_buffer *readonly_data_buffer_from_buffer(
 static void readonly_data_buffer_destroy(struct wlr_buffer *wlr_buffer) {
 	struct wlr_readonly_data_buffer *buffer =
 		readonly_data_buffer_from_buffer(wlr_buffer);
+	wlr_buffer_finish(wlr_buffer);
 	free(buffer->saved_data);
 	free(buffer);
 }
