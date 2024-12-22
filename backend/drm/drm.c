@@ -1822,6 +1822,14 @@ void scan_drm_connectors(struct wlr_drm_backend *drm,
 				drm_conn->connection != DRM_MODE_CONNECTED) {
 			wlr_log(WLR_INFO, "'%s' disconnected", wlr_conn->name);
 			disconnect_drm_connector(wlr_conn);
+		} else if (wlr_conn->status == DRM_MODE_CONNECTED &&
+				drm_conn->connection == DRM_MODE_CONNECTED
+				&& wlr_conn->props.hotplug_mode_update > 0)
+		{
+			wlr_log(WLR_INFO, "'%s' reconnected", wlr_conn->name);
+			disconnect_drm_connector(wlr_conn);
+			connect_drm_connector(wlr_conn, drm_conn);
+			new_outputs[new_outputs_len++] = wlr_conn;
 		}
 
 		drmModeFreeConnector(drm_conn);

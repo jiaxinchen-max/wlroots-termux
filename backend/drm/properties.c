@@ -25,6 +25,7 @@ static const struct prop_info connector_info[] = {
 	{ "EDID", INDEX(edid) },
 	{ "PATH", INDEX(path) },
 	{ "content type", INDEX(content_type) },
+	{ "hotplug_mode_update", INDEX(hotplug_mode_update) },
 	{ "link-status", INDEX(link_status) },
 	{ "max bpc", INDEX(max_bpc) },
 	{ "non-desktop", INDEX(non_desktop) },
