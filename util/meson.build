@@ -6,6 +6,7 @@ wlr_files += files(
 	'global.c',
 	'log.c',
 	'rect_union.c',
+	'rectpack.c',
 	'region.c',
 	'set.c',
 	'shm.c',
