@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <wlr/backend.h>
 #include <wlr/render/interface.h>
 #include <wlr/render/pixman.h>
 #include <wlr/render/wlr_renderer.h>
@@ -24,7 +25,6 @@
 #include <wlr/render/vulkan.h>
 #endif // WLR_HAS_VULKAN_RENDERER
 
-#include "backend/backend.h"
 #include "render/pixel_format.h"
 #include "render/wlr_renderer.h"
 #include "util/env.h"
@@ -180,8 +180,7 @@ static bool open_preferred_drm_fd(struct wlr_backend *backend, int *drm_fd_ptr,
 
 	// If the backend hasn't picked a DRM FD, but accepts DMA-BUFs, pick an
 	// arbitrary render node
-	uint32_t backend_caps = backend_get_buffer_caps(backend);
-	if (backend_caps & WLR_BUFFER_CAP_DMABUF) {
+	if (backend->buffer_caps & WLR_BUFFER_CAP_DMABUF) {
 		int drm_fd = open_drm_render_node();
 		if (drm_fd < 0) {
 			return false;

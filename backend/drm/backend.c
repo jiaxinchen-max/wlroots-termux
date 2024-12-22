@@ -76,10 +76,6 @@ static int backend_get_drm_fd(struct wlr_backend *backend) {
 	return drm->fd;
 }
 
-static uint32_t backend_get_buffer_caps(struct wlr_backend *backend) {
-	return WLR_BUFFER_CAP_DMABUF;
-}
-
 static bool backend_test(struct wlr_backend *backend,
 		const struct wlr_backend_output_state *states, size_t states_len) {
 	struct wlr_drm_backend *drm = get_drm_backend_from_backend(backend);
@@ -96,7 +92,6 @@ static const struct wlr_backend_impl backend_impl = {
 	.start = backend_start,
 	.destroy = backend_destroy,
 	.get_drm_fd = backend_get_drm_fd,
-	.get_buffer_caps = backend_get_buffer_caps,
 	.test = backend_test,
 	.commit = backend_commit,
 };
@@ -237,6 +232,8 @@ struct wlr_backend *wlr_drm_backend_create(struct wlr_session *session,
 		return NULL;
 	}
 	wlr_backend_init(&drm->backend, &backend_impl);
+
+	drm->backend.buffer_caps = WLR_BUFFER_CAP_DMABUF;
 
 	drm->session = session;
 	wl_list_init(&drm->fbs);

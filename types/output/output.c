@@ -1,7 +1,7 @@
 #include <assert.h>
-#include <backend/backend.h>
 #include <drm_fourcc.h>
 #include <stdlib.h>
+#include <wlr/backend.h>
 #include <wlr/interfaces/wlr_output.h>
 #include <wlr/render/allocator.h>
 #include <wlr/render/swapchain.h>

@@ -8,7 +8,6 @@
 #include "backend/drm/drm.h"
 #include "backend/drm/fb.h"
 #include "backend/drm/renderer.h"
-#include "backend/backend.h"
 #include "render/drm_format_set.h"
 #include "render/pixel_format.h"
 #include "render/wlr_renderer.h"

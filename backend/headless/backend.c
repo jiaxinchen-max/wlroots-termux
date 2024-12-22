@@ -45,16 +45,9 @@ static void backend_destroy(struct wlr_backend *wlr_backend) {
 	free(backend);
 }
 
-static uint32_t get_buffer_caps(struct wlr_backend *wlr_backend) {
-	return WLR_BUFFER_CAP_DATA_PTR
-		| WLR_BUFFER_CAP_DMABUF
-		| WLR_BUFFER_CAP_SHM;
-}
-
 static const struct wlr_backend_impl backend_impl = {
 	.start = backend_start,
 	.destroy = backend_destroy,
-	.get_buffer_caps = get_buffer_caps,
 };
 
 static void handle_event_loop_destroy(struct wl_listener *listener, void *data) {
@@ -73,6 +66,9 @@ struct wlr_backend *wlr_headless_backend_create(struct wl_event_loop *loop) {
 	}
 
 	wlr_backend_init(&backend->backend, &backend_impl);
+
+	backend->backend.buffer_caps =
+		WLR_BUFFER_CAP_DATA_PTR | WLR_BUFFER_CAP_DMABUF | WLR_BUFFER_CAP_SHM;
 
 	backend->event_loop = loop;
 	wl_list_init(&backend->outputs);

@@ -29,6 +29,9 @@ struct wlr_backend_output_state {
 struct wlr_backend {
 	const struct wlr_backend_impl *impl;
 
+	// Bitfield of supported buffer capabilities (see enum wlr_buffer_cap)
+	uint32_t buffer_caps;
+
 	struct {
 		// Whether wait/signal timelines are supported in output commits
 		bool timeline;

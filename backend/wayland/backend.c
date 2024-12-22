@@ -566,17 +566,10 @@ static int backend_get_drm_fd(struct wlr_backend *backend) {
 	return wl->drm_fd;
 }
 
-static uint32_t get_buffer_caps(struct wlr_backend *backend) {
-	struct wlr_wl_backend *wl = get_wl_backend_from_backend(backend);
-	return (wl->zwp_linux_dmabuf_v1 ? WLR_BUFFER_CAP_DMABUF : 0)
-		| (wl->shm ? WLR_BUFFER_CAP_SHM : 0);
-}
-
 static const struct wlr_backend_impl backend_impl = {
 	.start = backend_start,
 	.destroy = backend_destroy,
 	.get_drm_fd = backend_get_drm_fd,
-	.get_buffer_caps = get_buffer_caps,
 };
 
 bool wlr_backend_is_wl(struct wlr_backend *b) {
@@ -670,6 +663,13 @@ struct wlr_backend *wlr_wl_backend_create(struct wl_event_loop *loop,
 		}
 
 		zwp_linux_dmabuf_feedback_v1_destroy(linux_dmabuf_feedback_v1);
+	}
+
+	if (wl->zwp_linux_dmabuf_v1) {
+		wl->backend.buffer_caps |= WLR_BUFFER_CAP_DMABUF;
+	}
+	if (wl->shm) {
+		wl->backend.buffer_caps |= WLR_BUFFER_CAP_SHM;
 	}
 
 	int fd = wl_display_get_fd(wl->remote_display);

@@ -2,13 +2,13 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <wlr/backend.h>
 #include <wlr/config.h>
 #include <wlr/interfaces/wlr_buffer.h>
 #include <wlr/render/allocator.h>
 #include <wlr/util/log.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
-#include "backend/backend.h"
 #include "render/allocator/drm_dumb.h"
 #include "render/allocator/shm.h"
 #include "render/wlr_renderer.h"
@@ -96,7 +96,7 @@ static int reopen_drm_node(int drm_fd, bool allow_render_node) {
 
 struct wlr_allocator *wlr_allocator_autocreate(struct wlr_backend *backend,
 		struct wlr_renderer *renderer) {
-	uint32_t backend_caps = backend_get_buffer_caps(backend);
+	uint32_t backend_caps = backend->buffer_caps;
 	uint32_t renderer_caps = renderer->render_buffer_caps;
 
 	// Note, drm_fd may be negative if unavailable
