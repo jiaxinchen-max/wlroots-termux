@@ -952,7 +952,6 @@ const struct wlr_drm_format_set *wlr_output_get_primary_formats(
 
 bool wlr_output_is_direct_scanout_allowed(struct wlr_output *output) {
 	if (output->attach_render_locks > 0) {
-		wlr_log(WLR_DEBUG, "Direct scan-out disabled by lock");
 		return false;
 	}
 
@@ -961,8 +960,6 @@ bool wlr_output_is_direct_scanout_allowed(struct wlr_output *output) {
 	wl_list_for_each(cursor, &output->cursors, link) {
 		if (cursor->enabled && cursor->visible &&
 				cursor != output->hardware_cursor) {
-			wlr_log(WLR_DEBUG,
-				"Direct scan-out disabled by software cursor");
 			return false;
 		}
 	}

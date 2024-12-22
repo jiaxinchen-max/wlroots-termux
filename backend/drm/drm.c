@@ -770,8 +770,6 @@ static bool drm_connector_state_update_primary_fb(struct wlr_drm_connector *conn
 		&plane->formats);
 	wlr_buffer_unlock(local_buf);
 	if (!ok) {
-		wlr_drm_conn_log(conn, WLR_DEBUG,
-			"Failed to import buffer for scan-out");
 		return false;
 	}
 

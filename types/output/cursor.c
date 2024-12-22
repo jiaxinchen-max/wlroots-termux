@@ -200,6 +200,14 @@ static struct wlr_buffer *render_cursor_buffer(struct wlr_output_cursor *cursor)
 			return NULL;
 		}
 
+		if (sizes == NULL) {
+			// No cursor support
+			wlr_log(WLR_DEBUG, "Output '%s' has no cursor support, disabling permanently",
+				output->name);
+			output->software_cursor_locks++;
+			return NULL;
+		}
+
 		bool found = false;
 		for (size_t i = 0; i < sizes_len; i++) {
 			struct wlr_output_cursor_size size = sizes[i];
@@ -417,7 +425,6 @@ bool output_cursor_set_texture(struct wlr_output_cursor *cursor,
 		return true;
 	}
 
-	wlr_log(WLR_DEBUG, "Falling back to software cursor on output '%s'", output->name);
 	output_disable_hardware_cursor(output);
 	output_cursor_damage_whole(cursor);
 	return true;

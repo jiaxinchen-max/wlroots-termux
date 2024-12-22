@@ -73,16 +73,14 @@ static bool atomic_commit(struct atomic *atom, struct wlr_drm_backend *drm,
 
 	int ret = drmModeAtomicCommit(drm->fd, atom->req, flags, page_flip);
 	if (ret != 0) {
-		enum wlr_log_importance log_level = WLR_ERROR;
 		if (flags & DRM_MODE_ATOMIC_TEST_ONLY) {
-			log_level = WLR_DEBUG;
+			return false;
 		}
-
 		if (state->connectors_len == 1) {
 			struct wlr_drm_connector *conn = state->connectors[0].connector;
-			wlr_drm_conn_log_errno(conn, log_level, "Atomic commit failed");
+			wlr_drm_conn_log_errno(conn, WLR_ERROR, "Atomic commit failed");
 		} else {
-			wlr_log_errno(log_level, "Atomic commit failed");
+			wlr_log_errno(WLR_ERROR, "Atomic commit failed");
 		}
 		char *flags_str = atomic_commit_flags_str(flags);
 		wlr_log(WLR_DEBUG, "(Atomic commit flags: %s)",

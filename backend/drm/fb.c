@@ -144,7 +144,6 @@ static struct wlr_drm_fb *drm_fb_create(struct wlr_drm_backend *drm,
 		struct wlr_buffer *buf, const struct wlr_drm_format_set *formats) {
 	struct wlr_dmabuf_attributes attribs;
 	if (!wlr_buffer_get_dmabuf(buf, &attribs)) {
-		wlr_log(WLR_DEBUG, "Failed to get DMA-BUF from buffer");
 		return NULL;
 	}
 
@@ -169,9 +168,6 @@ static struct wlr_drm_fb *drm_fb_create(struct wlr_drm_backend *drm,
 				wlr_drm_format_set_has(formats, info->opaque_substitute, attribs.modifier)) {
 			attribs.format = info->opaque_substitute;
 		} else {
-			wlr_log(WLR_DEBUG, "Buffer format 0x%"PRIX32" with modifier "
-				"0x%"PRIX64" cannot be scanned out",
-				attribs.format, attribs.modifier);
 			goto error_fb;
 		}
 	}
