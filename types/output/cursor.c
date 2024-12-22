@@ -23,6 +23,8 @@ static bool output_set_hardware_cursor(struct wlr_output *output,
 		return false;
 	}
 
+	wlr_output_update_needs_frame(output);
+
 	wlr_buffer_unlock(output->cursor_front_buffer);
 	output->cursor_front_buffer = NULL;
 
@@ -30,6 +32,15 @@ static bool output_set_hardware_cursor(struct wlr_output *output,
 		output->cursor_front_buffer = wlr_buffer_lock(buffer);
 	}
 
+	return true;
+}
+
+static bool output_move_hardware_cursor(struct wlr_output *output, int x, int y) {
+	assert(output->impl->move_cursor);
+	if (!output->impl->move_cursor(output, x, y)) {
+		return false;
+	}
+	wlr_output_update_needs_frame(output);
 	return true;
 }
 
@@ -299,8 +310,7 @@ static bool output_cursor_attempt_hardware(struct wlr_output_cursor *cursor) {
 
 	// If the cursor was hidden or was a software cursor, the hardware
 	// cursor position is outdated
-	output->impl->move_cursor(cursor->output,
-		(int)cursor->x, (int)cursor->y);
+	output_move_hardware_cursor(cursor->output, (int)cursor->x, (int)cursor->y);
 
 	struct wlr_buffer *buffer = NULL;
 	if (texture != NULL) {
@@ -452,8 +462,7 @@ bool wlr_output_cursor_move(struct wlr_output_cursor *cursor,
 		return true;
 	}
 
-	assert(cursor->output->impl->move_cursor);
-	return cursor->output->impl->move_cursor(cursor->output, (int)x, (int)y);
+	return output_move_hardware_cursor(cursor->output, (int)x, (int)y);
 }
 
 struct wlr_output_cursor *wlr_output_cursor_create(struct wlr_output *output) {
