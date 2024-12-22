@@ -25,8 +25,7 @@ static void safe_close(int fd) {
 
 noreturn static void exec_xwayland(struct wlr_xwayland_server *server,
 		int notify_fd) {
-	if (!set_cloexec(server->x_fd[0], false) ||
-			!set_cloexec(server->x_fd[1], false) ||
+	if (!set_cloexec(server->x_fd, false) ||
 			!set_cloexec(server->wl_fd[1], false)) {
 		wlr_log(WLR_ERROR, "Failed to unset CLOEXEC on FD");
 		_exit(EXIT_FAILURE);
@@ -39,9 +38,8 @@ noreturn static void exec_xwayland(struct wlr_xwayland_server *server,
 	char *argv[64] = {0};
 	size_t i = 0;
 
-	char listenfd0[16], listenfd1[16], displayfd[16];
-	snprintf(listenfd0, sizeof(listenfd0), "%d", server->x_fd[0]);
-	snprintf(listenfd1, sizeof(listenfd1), "%d", server->x_fd[1]);
+	char listenfd[16], displayfd[16];
+	snprintf(listenfd, sizeof(listenfd), "%d", server->x_fd);
 	snprintf(displayfd, sizeof(displayfd), "%d", notify_fd);
 
 	argv[i++] = "Xwayland";
@@ -61,14 +59,10 @@ noreturn static void exec_xwayland(struct wlr_xwayland_server *server,
 
 #if HAVE_XWAYLAND_LISTENFD
 	argv[i++] = "-listenfd";
-	argv[i++] = listenfd0;
-	argv[i++] = "-listenfd";
-	argv[i++] = listenfd1;
+	argv[i++] = listenfd;
 #else
 	argv[i++] = "-listen";
-	argv[i++] = listenfd0;
-	argv[i++] = "-listen";
-	argv[i++] = listenfd1;
+	argv[i++] = listenfd;
 #endif
 	argv[i++] = "-displayfd";
 	argv[i++] = displayfd;
@@ -141,11 +135,9 @@ static void server_finish_process(struct wlr_xwayland_server *server) {
 		return;
 	}
 
-	if (server->x_fd_read_event[0]) {
-		wl_event_source_remove(server->x_fd_read_event[0]);
-		wl_event_source_remove(server->x_fd_read_event[1]);
-
-		server->x_fd_read_event[0] = server->x_fd_read_event[1] = NULL;
+	if (server->x_fd_read_event) {
+		wl_event_source_remove(server->x_fd_read_event);
+		server->x_fd_read_event = NULL;
 	}
 
 	if (server->client) {
@@ -182,9 +174,8 @@ static void server_finish_display(struct wlr_xwayland_server *server) {
 		return;
 	}
 
-	safe_close(server->x_fd[0]);
-	safe_close(server->x_fd[1]);
-	server->x_fd[0] = server->x_fd[1] = -1;
+	safe_close(server->x_fd);
+	server->x_fd = -1;
 
 	unlink_display_sockets(server->display);
 	server->display = -1;
@@ -309,7 +300,7 @@ static bool server_start_display(struct wlr_xwayland_server *server,
 	server->display_destroy.notify = handle_display_destroy;
 	wl_display_add_destroy_listener(wl_display, &server->display_destroy);
 
-	server->display = open_display_sockets(server->x_fd);
+	server->display = open_display_sockets(&server->x_fd);
 	if (server->display < 0) {
 		server_finish_display(server);
 		return false;
@@ -412,9 +403,8 @@ static bool server_start(struct wlr_xwayland_server *server) {
 static int xwayland_socket_connected(int fd, uint32_t mask, void *data) {
 	struct wlr_xwayland_server *server = data;
 
-	wl_event_source_remove(server->x_fd_read_event[0]);
-	wl_event_source_remove(server->x_fd_read_event[1]);
-	server->x_fd_read_event[0] = server->x_fd_read_event[1] = NULL;
+	wl_event_source_remove(server->x_fd_read_event);
+	server->x_fd_read_event = NULL;
 
 	server_start(server);
 
@@ -424,15 +414,8 @@ static int xwayland_socket_connected(int fd, uint32_t mask, void *data) {
 static bool server_start_lazy(struct wlr_xwayland_server *server) {
 	struct wl_event_loop *loop = wl_display_get_event_loop(server->wl_display);
 
-	if (!(server->x_fd_read_event[0] = wl_event_loop_add_fd(loop, server->x_fd[0],
+	if (!(server->x_fd_read_event = wl_event_loop_add_fd(loop, server->x_fd,
 				WL_EVENT_READABLE, xwayland_socket_connected, server))) {
-		return false;
-	}
-
-	if (!(server->x_fd_read_event[1] = wl_event_loop_add_fd(loop, server->x_fd[1],
-				WL_EVENT_READABLE, xwayland_socket_connected, server))) {
-		wl_event_source_remove(server->x_fd_read_event[0]);
-		server->x_fd_read_event[0] = NULL;
 		return false;
 	}
 
@@ -479,7 +462,7 @@ struct wlr_xwayland_server *wlr_xwayland_server_create(
 	server->options.terminate_delay = 0;
 #endif
 
-	server->x_fd[0] = server->x_fd[1] = -1;
+	server->x_fd = -1;
 	server->wl_fd[0] = server->wl_fd[1] = -1;
 	server->wm_fd[0] = server->wm_fd[1] = -1;
 

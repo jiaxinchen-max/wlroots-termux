@@ -35,8 +35,8 @@ struct wlr_xwayland_server {
 
 	int display;
 	char display_name[16];
-	int x_fd[2];
-	struct wl_event_source *x_fd_read_event[2];
+	int x_fd;
+	struct wl_event_source *x_fd_read_event;
 	struct wlr_xwayland_server_options options;
 
 	struct wl_display *wl_display;

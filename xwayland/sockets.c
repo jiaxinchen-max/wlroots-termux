@@ -18,9 +18,6 @@
 static const char lock_fmt[] = "/tmp/.X%d-lock";
 static const char socket_dir[] = "/tmp/.X11-unix";
 static const char socket_fmt[] = "/tmp/.X11-unix/X%d";
-#ifndef __linux__
-static const char socket_fmt2[] = "/tmp/.X11-unix/X%d_";
-#endif
 
 bool set_cloexec(int fd, bool cloexec) {
 	int flags = fcntl(fd, F_GETFD);
@@ -38,51 +35,6 @@ bool set_cloexec(int fd, bool cloexec) {
 		return false;
 	}
 	return true;
-}
-
-static int open_socket(struct sockaddr_un *addr, size_t path_size) {
-	int fd, rc;
-	socklen_t size = offsetof(struct sockaddr_un, sun_path) + path_size + 1;
-
-	fd = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (fd < 0) {
-		wlr_log_errno(WLR_ERROR, "Failed to create socket %c%s",
-			addr->sun_path[0] ? addr->sun_path[0] : '@',
-			addr->sun_path + 1);
-		return -1;
-	}
-	if (!set_cloexec(fd, true)) {
-		close(fd);
-		return -1;
-	}
-
-	if (addr->sun_path[0]) {
-		unlink(addr->sun_path);
-	}
-	if (bind(fd, (struct sockaddr*)addr, size) < 0) {
-		rc = errno;
-		wlr_log_errno(WLR_ERROR, "Failed to bind socket %c%s",
-			addr->sun_path[0] ? addr->sun_path[0] : '@',
-			addr->sun_path + 1);
-		goto cleanup;
-	}
-	if (listen(fd, 1) < 0) {
-		rc = errno;
-		wlr_log_errno(WLR_ERROR, "Failed to listen to socket %c%s",
-			addr->sun_path[0] ? addr->sun_path[0] : '@',
-			addr->sun_path + 1);
-		goto cleanup;
-	}
-
-	return fd;
-
-cleanup:
-	close(fd);
-	if (addr->sun_path[0]) {
-		unlink(addr->sun_path);
-	}
-	errno = rc;
-	return -1;
 }
 
 static bool check_socket_dir(void) {
@@ -111,66 +63,91 @@ static bool check_socket_dir(void) {
 	return true;
 }
 
-static bool open_sockets(int socks[2], int display) {
-	struct sockaddr_un addr = { .sun_family = AF_UNIX };
-	size_t path_size;
+static bool setup_socket_dir(void) {
+	mode_t dir_mode = 01777;
 
-	if (mkdir(socket_dir, 0755) == 0) {
-		wlr_log(WLR_INFO, "Created %s ourselves -- other users will "
-			"be unable to create X11 UNIX sockets of their own",
-			socket_dir);
-	} else if (errno != EEXIST) {
+	if (mkdir(socket_dir, dir_mode) != 0) {
+		if (errno == EEXIST) {
+			return check_socket_dir();
+		}
 		wlr_log_errno(WLR_ERROR, "Unable to mkdir %s", socket_dir);
 		return false;
-	} else if (!check_socket_dir()) {
-		return false;
 	}
 
-#ifdef __linux__
-	addr.sun_path[0] = 0;
-	path_size = snprintf(addr.sun_path + 1, sizeof(addr.sun_path) - 1, socket_fmt, display);
-#else
-	path_size = snprintf(addr.sun_path, sizeof(addr.sun_path), socket_fmt2, display);
-#endif
-	socks[0] = open_socket(&addr, path_size);
-	if (socks[0] < 0) {
-		return false;
-	}
+	wlr_log(WLR_INFO, "Created %s ourselves -- other users will "
+		"be unable to create X11 UNIX sockets of their own",
+		socket_dir);
 
-	path_size = snprintf(addr.sun_path, sizeof(addr.sun_path), socket_fmt, display);
-	socks[1] = open_socket(&addr, path_size);
-	if (socks[1] < 0) {
-		close(socks[0]);
-		socks[0] = -1;
+	// The mode passed to mkdir() is affected by umask, so set it again
+	if (chmod(socket_dir, dir_mode) != 0) {
+		wlr_log_errno(WLR_ERROR, "Failed to chmod %s", socket_dir);
 		return false;
 	}
 
 	return true;
 }
 
-void unlink_display_sockets(int display) {
-	char sun_path[64];
+static int open_socket(int display) {
+	if (!setup_socket_dir()) {
+		return -1;
+	}
 
-	snprintf(sun_path, sizeof(sun_path), socket_fmt, display);
-	unlink(sun_path);
+	struct sockaddr_un addr = { .sun_family = AF_UNIX };
+	size_t path_size = snprintf(addr.sun_path, sizeof(addr.sun_path), socket_fmt, display);
 
-#ifndef __linux__
-	snprintf(sun_path, sizeof(sun_path), socket_fmt2, display);
-	unlink(sun_path);
-#endif
+	socklen_t size = offsetof(struct sockaddr_un, sun_path) + path_size + 1;
 
-	snprintf(sun_path, sizeof(sun_path), lock_fmt, display);
-	unlink(sun_path);
+	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (fd < 0) {
+		wlr_log_errno(WLR_ERROR, "Failed to create socket %s", addr.sun_path);
+		return -1;
+	}
+	if (!set_cloexec(fd, true)) {
+		close(fd);
+		return -1;
+	}
+
+	int rc;
+	unlink(addr.sun_path);
+	if (bind(fd, (struct sockaddr *)&addr, size) < 0) {
+		rc = errno;
+		wlr_log_errno(WLR_ERROR, "Failed to bind socket %s", addr.sun_path);
+		goto cleanup;
+	}
+	if (listen(fd, 1) < 0) {
+		rc = errno;
+		wlr_log_errno(WLR_ERROR, "Failed to listen to socket %s", addr.sun_path);
+		goto cleanup;
+	}
+
+	return fd;
+
+cleanup:
+	close(fd);
+	unlink(addr.sun_path);
+	errno = rc;
+	return -1;
 }
 
-int open_display_sockets(int socks[2]) {
+void unlink_display_sockets(int display) {
+	char path[64];
+
+	snprintf(path, sizeof(path), socket_fmt, display);
+	unlink(path);
+
+	snprintf(path, sizeof(path), lock_fmt, display);
+	unlink(path);
+}
+
+int open_display_sockets(int *sock) {
 	int lock_fd, display;
 	char lock_name[64];
 
 	for (display = 0; display <= 32; display++) {
 		snprintf(lock_name, sizeof(lock_name), lock_fmt, display);
 		if ((lock_fd = open(lock_name, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0444)) >= 0) {
-			if (!open_sockets(socks, display)) {
+			*sock = open_socket(display);
+			if (*sock < 0) {
 				unlink(lock_name);
 				close(lock_fd);
 				continue;
