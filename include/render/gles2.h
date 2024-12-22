@@ -88,6 +88,8 @@ struct wlr_gles2_renderer {
 
 	struct wl_list buffers; // wlr_gles2_buffer.link
 	struct wl_list textures; // wlr_gles2_texture.link
+
+	bool swrast;
 };
 
 struct wlr_gles2_render_timer {
