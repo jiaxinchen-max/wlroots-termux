@@ -13,6 +13,8 @@
 #include <wlr/backend.h>
 #include <wlr/types/wlr_output.h>
 
+struct wlr_output_layer;
+
 /**
  * Output state fields that don't require backend support. Backends can ignore
  * them without breaking the API contract.
@@ -131,5 +133,13 @@ void wlr_output_send_present(struct wlr_output *output,
  */
 void wlr_output_send_request_state(struct wlr_output *output,
 	const struct wlr_output_state *state);
+
+/**
+ * Check whether a layer is enabled in an output state.
+ *
+ * The output state must have the layers field populated.
+ */
+bool wlr_output_state_is_layer_enabled(const struct wlr_output_state *state,
+	struct wlr_output_layer *layer);
 
 #endif

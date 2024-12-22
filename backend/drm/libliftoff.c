@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <wlr/interfaces/wlr_output.h>
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
 
@@ -184,23 +185,17 @@ static bool set_layer_props(struct wlr_drm_backend *drm,
 		struct wl_array *fb_damage_clips_arr) {
 	struct wlr_drm_layer *layer = get_drm_layer(drm, state->layer);
 
-	uint32_t width = 0, height = 0;
-	if (state->buffer != NULL) {
-		width = state->buffer->width;
-		height = state->buffer->height;
-	}
+	uint32_t width = state->buffer->width;
+	uint32_t height = state->buffer->height;
 
 	struct wlr_drm_fb *fb = layer->pending_fb;
-	int ret = 0;
-	if (state->buffer == NULL) {
-		ret = liftoff_layer_set_property(layer->liftoff, "FB_ID", 0);
-	} else if (fb == NULL) {
+	if (fb == NULL) {
 		liftoff_layer_set_fb_composited(layer->liftoff);
 	} else {
-		ret = liftoff_layer_set_property(layer->liftoff, "FB_ID", fb->id);
-	}
-	if (ret != 0) {
-		return false;
+		int ret = liftoff_layer_set_property(layer->liftoff, "FB_ID", fb->id);
+		if (ret != 0) {
+			return false;
+		}
 	}
 
 	uint64_t crtc_x = (uint64_t)state->dst_box.x;
@@ -363,6 +358,18 @@ static bool add_connector(drmModeAtomicReq *req,
 				const struct wlr_output_layer_state *layer_state = &state->base->layers[i];
 				ok = ok && set_layer_props(drm, layer_state, i + 1,
 					fb_damage_clips_arr);
+			}
+
+			struct wlr_output_layer *wlr_layer;
+			wl_list_for_each(wlr_layer, &conn->output.layers, link) {
+				if (wlr_output_state_is_layer_enabled(state->base, wlr_layer)) {
+					continue;
+				}
+				struct wlr_drm_layer *layer = get_drm_layer(drm, wlr_layer);
+				if (layer == NULL) {
+					continue;
+				}
+				liftoff_layer_set_property(layer->liftoff, "FB_ID", 0);
 			}
 		}
 
