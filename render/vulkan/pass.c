@@ -63,10 +63,6 @@ static float color_to_linear(float non_linear) {
 		non_linear / 12.92;
 }
 
-static float color_to_linear_premult(float non_linear, float alpha) {
-	return (alpha == 0) ? 0 : color_to_linear(non_linear / alpha) * alpha;
-}
-
 static void mat3_to_mat4(const float mat3[9], float mat4[4][4]) {
 	memset(mat4, 0, sizeof(float) * 16);
 	mat4[0][0] = mat3[0];
@@ -586,11 +582,27 @@ static void render_pass_add_rect(struct wlr_render_pass *wlr_pass,
 	// space and expects in inputs in linear space since it outputs
 	// colors in linear space as well (and vulkan then automatically
 	// does the conversion for out sRGB render targets).
+	struct wlr_render_color srgb = options->color;
+
+	// Un-premultiply sRGB values
+	if (srgb.a != 0) {
+		srgb.r /= srgb.a;
+		srgb.g /= srgb.a;
+		srgb.b /= srgb.a;
+	}
+
+	// Estimate perceptual lightness from sRGB values
+	float v = (srgb.r + srgb.g + srgb.b) / 3;
+	// Adjust alpha to make dark semi-transparent overlays a bit more
+	// opaque, better matching perceptual intent compared to simple
+	// linear blending (see README-alpha-blend for a longer discussion)
+	float new_a = ((v - 0.5f) * srgb.a * srgb.a + srgb.a) / (v + 0.5f);
+
 	float linear_color[] = {
-		color_to_linear_premult(options->color.r, options->color.a),
-		color_to_linear_premult(options->color.g, options->color.a),
-		color_to_linear_premult(options->color.b, options->color.a),
-		options->color.a, // no conversion for alpha
+		color_to_linear(srgb.r) * new_a,
+		color_to_linear(srgb.g) * new_a,
+		color_to_linear(srgb.b) * new_a,
+		new_a,
 	};
 
 	pixman_region32_t clip;

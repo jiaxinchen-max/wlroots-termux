@@ -1,0 +1,55 @@
+NOTE ON ALPHA BLENDING IN THE VULKAN RENDERER
+
+Vulkan internally performs alpha blending in linear RGB color space.
+While this preserves hue better than blending in sRGB space, it tends to
+produce a too-bright result when blending dark and light colors. (See
+illustrations in "How software gets color wrong" by Björn Ottosson,
+https://bottosson.github.io/posts/colorwrong/.)
+
+(In desktop usage, this especially affects dark, semi-transparent
+tooltips, which appear significantly more transparent than expected,
+affecting readability if light text underneath shows through.)
+
+This effect can be compensated somewhat by adjusting the alpha channel
+to make dark overlay colors a bit more opaque. The Vulkan renderer
+currently performs this compensation only for sRGB source textures.
+
+To keep the math manageable, the compensation equation is derived using
+a lot of assumptions and approximations, namely:
+
+  1. the perceptual lightness of a given source pixel is approximately
+     the average of the RGB values in sRGB encoding (0-1 range)
+
+  2. alternately, the perceptual lightness is approximately the square
+     root of the average of the RGB values in linear encoding (the power
+     should really be 1/2.4, but 1/2 is close enough)
+
+  3. the lightness of the pixel underneath (in the surface being blended
+     over) is unknown and thus assumed to be 0.5. (This does make the
+     compensation less accurate when the underlying surface is very dark
+     or light, but it's still much better than nothing.)
+
+If we could blend a pixel with lightness value v2 over a lightness value
+v1 in a theoretical perceptual color space, the resulting lightness
+should be simply:
+
+  (1 - alpha)*v1 + alpha*v2
+
+However, alpha blending in linear space instead results in a perceptual
+lightness of approximately:
+
+  sqrt((1 - alpha)*(v1^2) + alpha*(v2^2))
+
+To compensate, we would like to solve for a new alpha value a' where:
+
+  sqrt((1 - a')*(v1^2) + a'*(v2^2)) = (1 - a)*v1 + a*v2
+
+Solving gives:
+
+  a' = ((v2 - v1)*a^2 + 2*v1*a) / (v2 + v1)
+
+Assuming v1 = 0.5 simplifies this to:
+
+  a' = ((v2 - 0.5)*a^2 + a) / (v2 + 0.5)
+
+which is the equation used in the shader (texture.frag).
