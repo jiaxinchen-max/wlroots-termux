@@ -475,6 +475,10 @@ static void atomic_connector_add(struct atomic *atom,
 			} else {
 				plane_disable(atom, crtc->cursor);
 			}
+		} else {
+			if (!conn->output.software_cursor_locks) {
+				wlr_output_lock_software_cursors(&conn->output, true);
+			}
 		}
 	} else {
 		plane_disable(atom, crtc->primary);
