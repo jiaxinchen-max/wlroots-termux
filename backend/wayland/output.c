@@ -239,14 +239,25 @@ static struct wl_buffer *import_dmabuf(struct wlr_wl_backend *wl,
 	zwp_linux_buffer_params_v1_add_listener(params, &dmabuf_listener, &data);
 	zwp_linux_buffer_params_v1_create(params, dmabuf->width, dmabuf->height, dmabuf->format, 0);
 
+	// Wait for the zwp_linux_buffer_params_v1.created (or .failed) event to
+	// arrive. Moving the params object to its own queue, and dispatching
+	// just that queue ensures other random events (like surface configures)
+	// will not be processed.
+	// TODO: this blocks for a full message roundtrip -- can this be improved?
+	struct wl_event_queue *orig_queue = wl_proxy_get_queue((struct wl_proxy *)params);
+	struct wl_event_queue *queue = wl_display_create_queue(wl->remote_display);
+	wl_proxy_set_queue((struct wl_proxy *)params, queue);
 	while (!data.done) {
-		if (wl_display_dispatch(wl->remote_display) < 0) {
+		if (wl_display_dispatch_queue(wl->remote_display, queue) < 0) {
 			wlr_log(WLR_ERROR, "wl_display_dispatch() failed");
 			break;
 		}
 	}
-
+	if (data.wl_buffer) {
+		wl_proxy_set_queue((struct wl_proxy *)data.wl_buffer, orig_queue);
+	}
 	zwp_linux_buffer_params_v1_destroy(params);
+	wl_event_queue_destroy(queue);
 	return data.wl_buffer;
 }
 
@@ -710,6 +721,28 @@ static const struct wl_callback_listener unmap_callback_listener = {
 	.done = unmap_callback_handle_done,
 };
 
+static void output_wait_for_first_configure(struct wlr_wl_output *output) {
+	struct wl_display *display = output->backend->remote_display;
+	assert(!output->configured);
+
+	// Wait for the toplevel and surface configure events to arrive, but do
+	// not dispatch anything else (as signal listeners might see incomplete
+	// state, or through some indirect path recursively call this function.)
+	struct wl_event_queue *orig_queue = wl_proxy_get_queue((struct wl_proxy *)output->surface);
+	struct wl_event_queue *queue = wl_display_create_queue(display);
+	wl_proxy_set_queue((struct wl_proxy *)output->xdg_toplevel, queue);
+	wl_proxy_set_queue((struct wl_proxy *)output->xdg_surface, queue);
+	while (!output->configured) {
+		if (wl_display_dispatch_queue(display, queue) < 0) {
+			wlr_log(WLR_ERROR, "wl_display_dispatch_queue() failed");
+			break;
+		}
+	}
+	wl_proxy_set_queue((struct wl_proxy *)output->xdg_toplevel, orig_queue);
+	wl_proxy_set_queue((struct wl_proxy *)output->xdg_surface, orig_queue);
+	wl_event_queue_destroy(queue);
+}
+
 static bool output_commit(struct wlr_output *wlr_output,
 		const struct wlr_output_state *state) {
 	struct wlr_wl_output *output =
@@ -743,13 +776,23 @@ static bool output_commit(struct wlr_output *wlr_output,
 		wl_surface_commit(output->surface);
 		output->initialized = true;
 
-		wl_display_flush(output->backend->remote_display);
-		while (!output->configured) {
-			if (wl_display_dispatch(output->backend->remote_display) == -1) {
-				wlr_log(WLR_ERROR, "wl_display_dispatch() failed");
-				return false;
-			}
+		output_wait_for_first_configure(output);
+
+		int32_t req_width = output->wlr_output.width;
+		int32_t req_height = output->wlr_output.height;
+		if (output->requested_width > 0) {
+			req_width = output->requested_width;
 		}
+		if (output->requested_height > 0) {
+			req_height = output->requested_height;
+		}
+		struct wlr_output_state state;
+		wlr_output_state_init(&state);
+		wlr_output_state_set_custom_mode(&state, req_width, req_height, 0);
+		// TODO: listeners might call output_commit() and recurse; figure out
+		// how to avoid this / delay the signal
+		wlr_output_send_request_state(&output->wlr_output, &state);
+		wlr_output_state_finish(&state);
 	}
 
 	struct wlr_wl_buffer *buffer = NULL;
@@ -1017,26 +1060,32 @@ static void xdg_surface_handle_configure(void *data,
 	int32_t req_height = output->wlr_output.height;
 	if (output->requested_width > 0) {
 		req_width = output->requested_width;
-		output->requested_width = 0;
 	}
 	if (output->requested_height > 0) {
 		req_height = output->requested_height;
-		output->requested_height = 0;
 	}
 
 	if (output->unmap_callback != NULL) {
 		return;
 	}
 
+	bool first_configure = !output->configured;
+
 	output->configured = true;
 	output->has_configure_serial = true;
 	output->configure_serial = serial;
 
-	struct wlr_output_state state;
-	wlr_output_state_init(&state);
-	wlr_output_state_set_custom_mode(&state, req_width, req_height, 0);
-	wlr_output_send_request_state(&output->wlr_output, &state);
-	wlr_output_state_finish(&state);
+	if (!first_configure) {
+		// Emit a signal with the updated dimensions.
+		// (The first configure event is handled differently than the rest, with
+		// a blocking dispatch loop until it arrives. To ensure no requests are
+		// made in that loop, the first-configure state updates will be sent later.)
+		struct wlr_output_state state;
+		wlr_output_state_init(&state);
+		wlr_output_state_set_custom_mode(&state, req_width, req_height, 0);
+		wlr_output_send_request_state(&output->wlr_output, &state);
+		wlr_output_state_finish(&state);
+	}
 }
 
 static const struct xdg_surface_listener xdg_surface_listener = {
@@ -1186,9 +1235,32 @@ struct wlr_output *wlr_wl_output_create(struct wlr_backend *wlr_backend) {
 	xdg_toplevel_add_listener(output->xdg_toplevel,
 			&xdg_toplevel_listener, output);
 
-	wl_display_flush(backend->remote_display);
+	xdg_toplevel_set_title(output->xdg_toplevel, output->title);
+	xdg_toplevel_set_app_id(output->xdg_toplevel, output->app_id);
+	wl_surface_commit(output->surface);
+
+	// Wait for the initial configure to arrive.
+	output_wait_for_first_configure(output);
+	output->initialized = true;
+
+	// To avoid having listeners commit inside the `wl_display_dispatch_queue()`
+	// and use an incomplete state or unexpectedly recurse, set the state now
+	int32_t req_width = output->wlr_output.width;
+	int32_t req_height = output->wlr_output.height;
+	if (output->requested_width > 0) {
+		req_width = output->requested_width;
+	}
+	if (output->requested_height > 0) {
+		req_height = output->requested_height;
+	}
 
 	output_start(output);
+
+	struct wlr_output_state state;
+	wlr_output_state_init(&state);
+	wlr_output_state_set_custom_mode(&state, req_width, req_height, 0);
+	wlr_output_send_request_state(&output->wlr_output, &state);
+	wlr_output_state_finish(&state);
 
 	// TODO: let the compositor do this bit
 	if (backend->activation_v1 && backend->activation_token) {
