@@ -123,7 +123,8 @@ struct wlr_scene_surface {
 	struct {
 		struct wlr_box clip;
 
-		struct wlr_addon addon;
+		struct wlr_addon scene_buffer_addon;
+		struct wlr_addon surface_addon;
 
 		struct wl_listener outputs_update;
 		struct wl_listener output_enter;
@@ -401,6 +402,14 @@ struct wlr_scene_rect *wlr_scene_rect_from_node(struct wlr_scene_node *node);
  */
 struct wlr_scene_surface *wlr_scene_surface_try_from_buffer(
 	struct wlr_scene_buffer *scene_buffer);
+
+/**
+ * Get a struct wlr_scene_surface from a struct wlr_surface.
+ *
+ * Returns NULL if there's no struct wlr_scene_surface created for this
+ * struct wlr_surface.
+ */
+struct wlr_scene_surface *wlr_scene_surface_try_from_wlr_surface(struct wlr_surface *surface);
 
 /**
  * Add a node displaying a solid-colored rectangle to the scene-graph.

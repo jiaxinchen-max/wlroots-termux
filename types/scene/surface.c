@@ -228,12 +228,11 @@ static bool scene_buffer_point_accepts_input(struct wlr_scene_buffer *scene_buff
 	return wlr_surface_point_accepts_input(scene_surface->surface, *sx, *sy);
 }
 
-static void surface_addon_destroy(struct wlr_addon *addon) {
-	struct wlr_scene_surface *surface = wl_container_of(addon, surface, addon);
-
+static void scene_surface_destroy(struct wlr_scene_surface *surface) {
 	scene_buffer_unmark_client_buffer(surface->buffer);
 
-	wlr_addon_finish(&surface->addon);
+	wlr_addon_finish(&surface->scene_buffer_addon);
+	wlr_addon_finish(&surface->surface_addon);
 
 	wl_list_remove(&surface->outputs_update.link);
 	wl_list_remove(&surface->output_enter.link);
@@ -246,6 +245,21 @@ static void surface_addon_destroy(struct wlr_addon *addon) {
 	free(surface);
 }
 
+static void scene_buffer_addon_destroy(struct wlr_addon *addon) {
+	struct wlr_scene_surface *surface = wl_container_of(addon, surface, scene_buffer_addon);
+	scene_surface_destroy(surface);
+}
+
+static const struct wlr_addon_interface scene_buffer_addon_impl = {
+	.name = "wlr_scene_surface",
+	.destroy = scene_buffer_addon_destroy,
+};
+
+static void surface_addon_destroy(struct wlr_addon *addon) {
+	struct wlr_scene_surface *surface = wl_container_of(addon, surface, surface_addon);
+	scene_surface_destroy(surface);
+}
+
 static const struct wlr_addon_interface surface_addon_impl = {
 	.name = "wlr_scene_surface",
 	.destroy = surface_addon_destroy,
@@ -254,13 +268,23 @@ static const struct wlr_addon_interface surface_addon_impl = {
 struct wlr_scene_surface *wlr_scene_surface_try_from_buffer(
 		struct wlr_scene_buffer *scene_buffer) {
 	struct wlr_addon *addon = wlr_addon_find(&scene_buffer->node.addons,
-		scene_buffer, &surface_addon_impl);
+		scene_buffer, &scene_buffer_addon_impl);
 	if (!addon) {
 		return NULL;
 	}
 
-	struct wlr_scene_surface *surface = wl_container_of(addon, surface, addon);
+	struct wlr_scene_surface *surface = wl_container_of(addon, surface, scene_buffer_addon);
 	return surface;
+}
+
+struct wlr_scene_surface *wlr_scene_surface_try_from_wlr_surface(struct wlr_surface *surface) {
+	struct wlr_addon *addon = wlr_addon_find(&surface->addons, NULL, &surface_addon_impl);
+	if (addon == NULL) {
+		return NULL;
+	}
+
+	struct wlr_scene_surface *scene_surface = wl_container_of(addon, scene_surface, surface_addon);
+	return scene_surface;
 }
 
 struct wlr_scene_surface *wlr_scene_surface_create(struct wlr_scene_tree *parent,
@@ -301,8 +325,10 @@ struct wlr_scene_surface *wlr_scene_surface_create(struct wlr_scene_tree *parent
 	surface->surface_commit.notify = handle_scene_surface_surface_commit;
 	wl_signal_add(&wlr_surface->events.commit, &surface->surface_commit);
 
-	wlr_addon_init(&surface->addon, &scene_buffer->node.addons,
-		scene_buffer, &surface_addon_impl);
+	wlr_addon_init(&surface->scene_buffer_addon, &scene_buffer->node.addons,
+		scene_buffer, &scene_buffer_addon_impl);
+
+	wlr_addon_init(&surface->surface_addon, &wlr_surface->addons, NULL, &surface_addon_impl);
 
 	surface_reconfigure(surface);
 
