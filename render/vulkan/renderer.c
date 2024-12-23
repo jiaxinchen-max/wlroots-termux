@@ -198,6 +198,25 @@ static void shared_buffer_destroy(struct wlr_vk_renderer *r,
 	free(buffer);
 }
 
+static VkDeviceSize minimum_bucket(VkDeviceSize size) {
+	// Require at least 2x space in the bucket
+	size *= 2;
+
+	if (size < min_stage_size) {
+		return min_stage_size;
+	}
+
+	// Calculate the smallest containing power of two
+	size -= 1;
+	size |= size >> 1;
+	size |= size >> 2;
+	size |= size >> 4;
+	size |= size >> 8;
+	size |= size >> 16;
+	size |= size >> 32;
+	return size + 1;
+}
+
 struct wlr_vk_buffer_span vulkan_get_stage_span(struct wlr_vk_renderer *r,
 		VkDeviceSize size, VkDeviceSize alignment) {
 	// try to find free span
@@ -245,16 +264,22 @@ struct wlr_vk_buffer_span vulkan_get_stage_span(struct wlr_vk_renderer *r,
 		goto error_alloc;
 	}
 
-	// we didn't find a free buffer - create one
-	// size = clamp(max(size * 2, prev_size * 2), min_size, max_size)
-	VkDeviceSize bsize = size * 2;
-	bsize = bsize < min_stage_size ? min_stage_size : bsize;
-	if (!wl_list_empty(&r->stage.buffers)) {
-		struct wl_list *last_link = r->stage.buffers.prev;
-		struct wlr_vk_shared_buffer *prev = wl_container_of(
-			last_link, prev, link);
-		VkDeviceSize last_size = 2 * prev->buf_size;
-		bsize = bsize < last_size ? last_size : bsize;
+	// We allocate buffers in buckets of increasing size, each twice the
+	// previous and always able to hold at least 2x the allocation request.
+	VkDeviceSize bsize = minimum_bucket(size);
+	struct wl_list *insertion_target = NULL;
+	wl_list_for_each_reverse(buf, &r->stage.buffers, link) {
+		if (buf->buf_size >= bsize) {
+			if (buf->buf_size > bsize * 2) {
+				// There have found a missing bucket size in the sequence.
+				insertion_target = &buf->link;
+				break;
+			}
+			bsize *= 2;
+		}
+	}
+	if (insertion_target == NULL) {
+		insertion_target = &r->stage.buffers;
 	}
 
 	if (bsize > max_stage_size) {
@@ -326,7 +351,7 @@ struct wlr_vk_buffer_span vulkan_get_stage_span(struct wlr_vk_renderer *r,
 	}
 
 	buf->buf_size = bsize;
-	wl_list_insert(&r->stage.buffers, &buf->link);
+	wl_list_insert(insertion_target, &buf->link);
 
 	*a = (struct wlr_vk_allocation){
 		.start = 0,
@@ -466,13 +491,22 @@ static void release_command_buffer_resources(struct wlr_vk_command_buffer *cb,
 		wlr_texture_destroy(&texture->wlr_texture);
 	}
 
+	VkDeviceSize cur_size = min_stage_size;
+	struct wl_list *insertion_target = &renderer->stage.buffers;
 	struct wlr_vk_shared_buffer *buf, *buf_tmp;
-	wl_list_for_each_safe(buf, buf_tmp, &cb->stage_buffers, link) {
+	wl_list_for_each_reverse_safe(buf, buf_tmp, &cb->stage_buffers, link) {
 		buf->allocs.size = 0;
 		buf->last_used_ms = now;
 
 		wl_list_remove(&buf->link);
-		wl_list_insert(&renderer->stage.buffers, &buf->link);
+
+		// Sorted insert
+		while (insertion_target->prev != &renderer->stage.buffers && buf->buf_size > cur_size) {
+			insertion_target = insertion_target->prev;
+			struct wlr_vk_shared_buffer *tbuf = wl_container_of(insertion_target, tbuf, link);
+			cur_size = tbuf->buf_size;
+		}
+		wl_list_insert(insertion_target, &buf->link);
 	}
 
 	if (cb->color_transform) {
