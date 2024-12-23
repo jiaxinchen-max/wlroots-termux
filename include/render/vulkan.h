@@ -11,6 +11,7 @@
 #include <wlr/render/interface.h>
 #include <wlr/util/addon.h>
 #include "util/rect_union.h"
+#include <pixman.h>
 
 struct wlr_vk_descriptor_pool;
 struct wlr_vk_texture;
@@ -469,6 +470,9 @@ struct wlr_vk_texture {
 	struct wlr_addon buffer_addon;
 
 	struct wl_list views; // struct wlr_vk_texture_ds.link
+
+	// For SHM buffers
+	pixman_region32_t invalidated;
 };
 
 struct wlr_vk_texture *vulkan_get_texture(struct wlr_texture *wlr_texture);
@@ -479,6 +483,7 @@ VkImage vulkan_import_dmabuf(struct wlr_vk_renderer *renderer,
 struct wlr_texture *vulkan_texture_from_buffer(
 	struct wlr_renderer *wlr_renderer, struct wlr_buffer *buffer);
 void vulkan_texture_destroy(struct wlr_vk_texture *texture);
+void vulkan_texture_update(struct wlr_vk_texture *texture);
 
 struct wlr_vk_descriptor_pool {
 	VkDescriptorPool pool;

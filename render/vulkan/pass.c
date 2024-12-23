@@ -703,6 +703,8 @@ static void render_pass_add_texture(struct wlr_render_pass *wlr_pass,
 		wl_list_insert(&renderer->foreign_textures, &texture->foreign_link);
 	}
 
+	vulkan_texture_update(texture);
+
 	struct wlr_fbox src_box;
 	wlr_render_texture_options_get_src_box(options, &src_box);
 	struct wlr_box dst_box;

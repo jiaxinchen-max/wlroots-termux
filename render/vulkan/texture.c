@@ -153,6 +153,26 @@ static bool write_pixels(struct wlr_vk_texture *texture,
 	return true;
 }
 
+void vulkan_texture_update(struct wlr_vk_texture *texture) {
+	if (pixman_region32_empty(&texture->invalidated)) {
+		return;
+	}
+
+	void *data;
+	uint32_t format;
+	size_t stride;
+	if (wlr_buffer_begin_data_ptr_access(texture->buffer,
+			WLR_BUFFER_DATA_PTR_ACCESS_READ, &data, &format, &stride)) {
+		write_pixels(texture, stride, &texture->invalidated, data, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT);
+		wlr_buffer_end_data_ptr_access(texture->buffer);
+	}
+
+	pixman_region32_clear(&texture->invalidated);
+	wlr_buffer_unlock(texture->buffer);
+	texture->buffer = NULL;
+}
+
 static bool vulkan_texture_update_from_buffer(struct wlr_texture *wlr_texture,
 		struct wlr_buffer *buffer, const pixman_region32_t *damage) {
 	struct wlr_vk_texture *texture = vulkan_get_texture(wlr_texture);
@@ -172,8 +192,12 @@ static bool vulkan_texture_update_from_buffer(struct wlr_texture *wlr_texture,
 		goto out;
 	}
 
-	ok = write_pixels(texture, stride, damage, data, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT);
+	if (texture->buffer) {
+		wlr_buffer_unlock(texture->buffer);
+	}
+
+	texture->buffer = wlr_buffer_lock(buffer);
+	pixman_region32_union(&texture->invalidated, &texture->invalidated, damage);
 
 out:
 	wlr_buffer_end_data_ptr_access(buffer);
@@ -198,6 +222,7 @@ void vulkan_texture_destroy(struct wlr_vk_texture *texture) {
 	}
 
 	wl_list_remove(&texture->link);
+	pixman_region32_fini(&texture->invalidated);
 
 	VkDevice dev = texture->renderer->dev->dev;
 
@@ -219,13 +244,18 @@ void vulkan_texture_destroy(struct wlr_vk_texture *texture) {
 
 static void vulkan_texture_unref(struct wlr_texture *wlr_texture) {
 	struct wlr_vk_texture *texture = vulkan_get_texture(wlr_texture);
-	if (texture->buffer != NULL) {
-		// Keep the texture around, in case the buffer is re-used later. We're
-		// still listening to the buffer's destroy event.
+	if (texture->buffer) {
 		wlr_buffer_unlock(texture->buffer);
-	} else {
-		vulkan_texture_destroy(texture);
+		if (texture->dmabuf_imported) {
+			// Keep the texture around, in case the buffer is re-used later. We're
+			// still listening to the buffer's destroy event.
+			return;
+		}
+		// The buffer is temporary and has no add-on, clear it before destroy
+		texture->buffer = NULL;
 	}
+
+	vulkan_texture_destroy(texture);
 }
 
 static bool vulkan_texture_read_pixels(struct wlr_texture *wlr_texture,
@@ -265,6 +295,7 @@ static struct wlr_vk_texture *vulkan_texture_create(
 	texture->renderer = renderer;
 	wl_list_insert(&renderer->textures, &texture->link);
 	wl_list_init(&texture->views);
+	pixman_region32_init(&texture->invalidated);
 	return texture;
 }
 
@@ -370,9 +401,11 @@ static void texture_set_format(struct wlr_vk_texture *texture,
 
 static struct wlr_texture *vulkan_texture_from_pixels(
 		struct wlr_vk_renderer *renderer, uint32_t drm_fmt, uint32_t stride,
-		uint32_t width, uint32_t height, const void *data) {
+		struct wlr_buffer *buffer) {
 	VkResult res;
 	VkDevice dev = renderer->dev->dev;
+	int32_t width = buffer->width;
+	int32_t height = buffer->height;
 
 	const struct wlr_vk_format_props *fmt =
 		vulkan_format_props_from_drm(renderer->dev, drm_fmt);
@@ -459,12 +492,8 @@ static struct wlr_texture *vulkan_texture_from_pixels(
 		goto error;
 	}
 
-	pixman_region32_t region;
-	pixman_region32_init_rect(&region, 0, 0, width, height);
-	if (!write_pixels(texture, stride, &region, data, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0)) {
-		goto error;
-	}
+	pixman_region32_init_rect(&texture->invalidated, 0, 0, width, height);
+	texture->buffer = wlr_buffer_lock(buffer);
 
 	return &texture->wlr_texture;
 
@@ -815,7 +844,7 @@ struct wlr_texture *vulkan_texture_from_buffer(struct wlr_renderer *wlr_renderer
 	} else if (wlr_buffer_begin_data_ptr_access(buffer,
 			WLR_BUFFER_DATA_PTR_ACCESS_READ, &data, &format, &stride)) {
 		struct wlr_texture *tex = vulkan_texture_from_pixels(renderer,
-			format, stride, buffer->width, buffer->height, data);
+			format, stride, buffer);
 		wlr_buffer_end_data_ptr_access(buffer);
 		return tex;
 	} else {
