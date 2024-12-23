@@ -424,6 +424,9 @@ struct wlr_backend *wlr_x11_backend_create(struct wl_event_loop *loop,
 		{ .name = "_NET_WM_NAME", .atom = &x11->atoms.net_wm_name },
 		{ .name = "UTF8_STRING", .atom = &x11->atoms.utf8_string },
 		{ .name = "_VARIABLE_REFRESH", .atom = &x11->atoms.variable_refresh },
+		{ .name = "_NET_WM_PID", .atom = &x11->atoms.net_wm_pid },
+		{ .name = "WM_CLIENT_MACHINE", .atom = &x11->atoms.wm_client_machine },
+		{ .name = "WM_CLASS", .atom = &x11->atoms.wm_class },
 	};
 
 	for (size_t i = 0; i < sizeof(atom) / sizeof(atom[0]); ++i) {

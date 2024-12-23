@@ -96,6 +96,9 @@ struct wlr_x11_backend {
 		xcb_atom_t net_wm_name;
 		xcb_atom_t utf8_string;
 		xcb_atom_t variable_refresh;
+		xcb_atom_t net_wm_pid;
+		xcb_atom_t wm_client_machine;
+		xcb_atom_t wm_class;
 	} atoms;
 
 	// The time we last received an event

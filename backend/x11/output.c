@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <limits.h>
 
 #include <drm_fourcc.h>
 #include <xcb/dri3.h>
@@ -661,6 +663,33 @@ struct wlr_output *wlr_x11_output_create(struct wlr_backend *backend) {
 	wlr_output->adaptive_sync_status = WLR_OUTPUT_ADAPTIVE_SYNC_ENABLED;
 
 	wlr_x11_output_set_title(wlr_output, NULL);
+
+	uint32_t pid = getpid();
+	xcb_change_property(x11->xcb, XCB_PROP_MODE_REPLACE, output->win,
+		x11->atoms.net_wm_pid, XCB_ATOM_CARDINAL, 32, 1,
+		&pid);
+
+	char hostname[_POSIX_HOST_NAME_MAX + 1];
+	if (gethostname(hostname, sizeof(hostname)) != -1) {
+		xcb_change_property(x11->xcb, XCB_PROP_MODE_REPLACE, output->win,
+			x11->atoms.wm_client_machine, XCB_ATOM_STRING, 8, strlen(hostname) + 1,
+			hostname);
+	}
+
+#define X11_OUT_WM_CLASS_WLR "wlroots"
+	char wm_class[32];
+	static_assert(sizeof(wm_class) > sizeof(X11_OUT_WM_CLASS_WLR),
+		"wm_class must be large enough to contain X11_OUT_WM_CLASS_WLR and another string");
+	snprintf(wm_class, sizeof(wm_class) - sizeof(X11_OUT_WM_CLASS_WLR), "%s", wlr_output->name);
+
+	size_t wm_class_inst_size = strlen(wm_class) + 1;
+	snprintf(wm_class + wm_class_inst_size, sizeof(wm_class) - wm_class_inst_size,
+		"%s", X11_OUT_WM_CLASS_WLR);
+
+	xcb_change_property(x11->xcb, XCB_PROP_MODE_REPLACE, output->win,
+		x11->atoms.wm_class, XCB_ATOM_STRING, 8, wm_class_inst_size + sizeof(X11_OUT_WM_CLASS_WLR),
+		wm_class);
+#undef X11_OUT_WM_CLASS_WLR
 
 	xcb_flush(x11->xcb);
 
