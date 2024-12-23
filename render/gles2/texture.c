@@ -152,7 +152,8 @@ static bool gles2_texture_bind(struct wlr_gles2_texture *texture) {
 
 		GLenum fb_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		if (fb_status != GL_FRAMEBUFFER_COMPLETE) {
-			wlr_log(WLR_ERROR, "Failed to create FBO");
+			const char *status_str = framebuffer_status_to_string(fb_status);
+			wlr_log(WLR_ERROR, "Failed to create FBO: status 0x%x (%s)", fb_status, status_str);
 			glDeleteFramebuffers(1, &texture->fbo);
 			texture->fbo = 0;
 

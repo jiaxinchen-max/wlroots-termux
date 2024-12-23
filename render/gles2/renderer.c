@@ -113,7 +113,8 @@ GLuint gles2_buffer_get_fbo(struct wlr_gles2_buffer *buffer) {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	if (fb_status != GL_FRAMEBUFFER_COMPLETE) {
-		wlr_log(WLR_ERROR, "Failed to create FBO");
+		const char *status_str = framebuffer_status_to_string(fb_status);
+		wlr_log(WLR_ERROR, "Failed to create FBO: status 0x%x (%s)", fb_status, status_str);
 		glDeleteFramebuffers(1, &buffer->fbo);
 		buffer->fbo = 0;
 	}
@@ -384,6 +385,23 @@ void push_gles2_debug_(struct wlr_gles2_renderer *renderer,
 void pop_gles2_debug(struct wlr_gles2_renderer *renderer) {
 	if (renderer->procs.glPopDebugGroupKHR) {
 		renderer->procs.glPopDebugGroupKHR();
+	}
+}
+
+const char* framebuffer_status_to_string(GLenum status) {
+	switch (status) {
+	case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+		return "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";
+	case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+		return "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT";
+	case GL_FRAMEBUFFER_UNSUPPORTED:
+		return "GL_FRAMEBUFFER_UNSUPPORTED";
+	case GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS:
+		return "GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS";
+	case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE_EXT:
+		return "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE_EXT";
+	default:
+		return "Unknown framebuffer status";
 	}
 }
 
