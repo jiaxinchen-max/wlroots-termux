@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="ext_action_binder_v1">
+  <copyright>
+    Copyright © 2023-2024 Anna "navi" Figueiredo Gomes
+
+    Permission to use, copy, modify, distribute, and sell this
+    software and its documentation for any purpose is hereby granted
+    without fee, provided that the above copyright notice appear in
+    all copies and that both that copyright notice and this permission
+    notice appear in supporting documentation, and that the name of
+    the copyright holders not be used in advertising or publicity
+    pertaining to distribution of the software without specific,
+    written prior permission. The copyright holders make no
+    representations about the suitability of this software for any
+    purpose. It is provided "as is" without express or implied
+    warranty.
+
+    THE COPYRIGHT HOLDERS DISCLAIM ALL WARRANTIES WITH REGARD TO THIS
+    SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+    FITNESS, IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
+    AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+    ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+    THIS SOFTWARE.
+  </copyright>
+
+  <description summary="binds actions">
+    This protocol allows clients to register "actions" as a set of triggers
+    and metadata, and get notified when those actions are triggered by the user.
+
+    Warning! The protocol described in this file is currently in the testing
+    phase. Backward compatible changes may be added together with the
+    corresponding interface version bump. Backward incompatible changes can
+    only be done by creating a new major version of the extension.
+
+    The key words "must", "must not", "required", "shall", "shall not", "should",
+    "should not", "recommended",  "may", and "optional" in this document are to
+    be interpreted as described in IETF RFC 2119.
+  </description>
+
+  <interface name="ext_action_binder_v1" version="1">
+    <description summary="action binder">
+      This interface is designed to allow any application to bind an action.
+
+      It is left to the compositor to determine which client will get events.
+      The choice can be based on policy, heuristic, user configuration, or any
+      other mechanism that may be relevant.
+      Here are some examples of dispatching choice: all applications, last
+      focused, user-defined preference order, latest fullscreened application.
+
+      This interface is exposed as global.
+    </description>
+
+    <request name="destroy" type="destructor">
+      <description summary="unbind the actions">
+        The client no longer wants to receive events for any action.
+      </description>
+    </request>
+
+    <request name="create_binding">
+      <description summary="create a binding">
+        Creates a binding.
+
+        After setting the metadata on all bindings created, the client must
+        call ext_action_binder_v1.commit for the binding to take effect.
+      </description>
+      <arg name="binding" type="new_id" interface="ext_action_binding_v1" summary="the new binding" />
+    </request>
+
+    <request name="commit">
+      <description summary="commits all created bindings">
+        Commits all bindings created from this interface.
+        This request may be called again if new bindings are created,
+        already bound bindings are unaffected.
+
+        After calling bind, either the "bound" or "rejected" event shall
+        be sent for each binding created.
+
+        If no action has been set for any binding, the error "invalid_binding" is raised.
+      </description>
+    </request>
+
+    <enum name="error">
+      <entry name="invalid_binding" value="0" summary="the binding has no action set"/>
+    </enum>
+  </interface>
+
+  <interface name="ext_action_binding_v1" version="1">
+    <description summary="a binding for an action">
+      This interface defines an individual binding, allowing the client to register metadata about
+      the action and receive triggered events.
+    </description>
+
+    <request name="destroy" type="destructor">
+      <description summary="unbind the actions">
+        The client no longer wants to receive events for this binding.
+      </description>
+    </request>
+
+    <request name="set_name">
+      <description summary="sets the category and name of a binding">
+        Sets an arbitrary couple of a category and a name describing the
+        wanted behaviour. Some categories are well-known and shared by
+        applications while each application can have its own category
+        for internal actions.
+
+        This name may be used by the compositor to render a ui for bindings.
+
+        A name must be set before attempting to commit a binding.
+
+        Attempting to send this request twice or after the binding was bound raises an already set error.
+      </description>
+      <arg name="category" type="string" summary="the action category" />
+      <arg name="name" type="string" summary="the action name" />
+    </request>
+
+    <request name="set_description">
+      <description summary="set the human-readable description of a binding">
+        This setting is optional.
+
+        This description may be used by the compositor to render a ui for bindings.
+
+        Attempting to send this request twice or after the binding was bound raises an already_set error.
+      </description>
+      <arg name="description" type="string" summary="a human-readable description of what the binding does" />
+    </request>
+
+    <request name="set_app_id">
+      <description summary="set the application ID">
+        This setting is optional.
+
+        The app ID identifies the general class of applications to which
+        the binding belongs. The compositor may use this to select which
+        client will receive an event.
+
+        Attempting to send this request twice or after the binding was bound raises an already_set error.
+      </description>
+      <arg name="app_id" type="string" summary="app_id of the application requesting this bind"/>
+    </request>
+
+    <request name="set_seat">
+      <description summary="sets a target seat">
+        This setting is optional.
+
+        If set, the actions shall only be triggered by the specific seat.
+
+        Attempting to send this request twice or after the binding was bound raises an already_set error.
+      </description>
+      <arg name="seat" type="object" interface="wl_seat" summary="target seat"/>
+    </request>
+
+    <request name="set_keyboard_hint">
+      <description summary="Sets a keycombo as a trigger hint.">
+        This setting is optional.
+
+        This hint is a suggestion to the compositor, and the action must not rely
+        on being set to this specific trigger.
+
+        The keycombo must follow the XDG Shortcut standard.
+
+        Only a maximum of one hint shall be set per action.
+      </description>
+      <arg name="keycombo" type="string" summary="the keycombo that the client would like to trigger the action"/>
+    </request>
+
+    <request name="set_mouse_hint">
+      <description summary="Sets a mouse button as a trigger hint.">
+        This setting is optional.
+
+        This hint is a suggestion to the compositor, and the action must not rely
+        on being set to this specific trigger.
+
+        Button is a value mapped to their x11 values (1=left, 2=middle, 3=right,
+        4=scroll up, 5=scroll down, 6=scroll left, 7=scroll right, 8=back, 9=forward).
+
+        Only a maximum of one hint shall be set per action.
+      </description>
+      <arg name="button" type="uint" summary="the mouse button that the client would like to trigger the action"/>
+    </request>
+
+    <enum name="gesture_type">
+      <description summary="Type of the hint gesture.">
+      </description>
+      <entry name="hold" value="0"/>
+      <entry name="swipe" value="1"/>
+      <entry name="pinch" value="2"/>
+    </enum>
+
+    <enum name="gesture_direction">
+      <description summary="Direction of the hint gesture.">
+      </description>
+      <entry name="none" value="0"/>
+      <entry name="up" value="1"/>
+      <entry name="down" value="2"/>
+      <entry name="left" value="3"/>
+      <entry name="right" value="4"/>
+      <entry name="inward" value="5"/>
+      <entry name="outward" value="6"/>
+      <entry name="clockwise" value="7"/>
+      <entry name="counterclockwise" value="8"/>
+    </enum>
+
+    <request name="set_gesture_hint">
+      <description summary="sets a touchpad gesture as a trigger hint">
+        This setting is optional.
+
+        This hint is a suggestion to the compositor, and the action must not rely
+        on being set to this specific trigger.
+
+        Only a maximum of one trigger hint may be set per action.
+      </description>
+      <arg name="type" type="uint" enum="gesture_type" summary="the type of trigger that was sent"/>
+      <arg name="direction" type="uint" enum="gesture_direction" summary="the type of trigger that was sent"/>
+      <arg name="fingers" type="uint" summary="the number of fingers on the gesture"/>
+    </request>
+
+    <event name="bound">
+      <description summary="the compositor bound the binding to an action">
+        Sent after the event was processed, and was bound to one or more of the actions set.
+      </description>
+      <arg name="trigger" type="string" summary="human-readable string describing the trigger for the action" />
+    </event>
+
+    <event name="rejected">
+      <description summary="the compositor rejected the binding">
+        Sent after the event was processed and got rejected,
+        or at any time should the compositor want to remove the binding.
+        The compositor must not send further events after this event.
+        The client should destroy the object at this point.
+      </description>
+    </event>
+
+    <enum name="trigger_type">
+      <description summary="type of binding triggered">
+        Depending on the user configuration, an action can be either one_shot or
+        sustained. The client must handle all the three event types and either make
+        sense of them or ignore them properly.
+
+        one_shot actions are for events that don't have a defined "end", like a laptop
+        lid closing, or a gesture. The client should not expect to recieve a released or
+        ending event for that action.
+
+        sustained actions have a start and an end. after a 'pressed' event is sent, a
+        'released' event should eventually be sent as well.
+      </description>
+      <entry name="one_shot" value="0"
+        summary="a one shot action was triggered" />
+      <entry name="pressed" value="1"
+        summary="a sustained action was started" />
+      <entry name="released" value="2"
+        summary="a sustained action ended" />
+    </enum>
+
+    <event name="triggered">
+      <description summary="the action triggered">
+        This event is sent when actions are triggered.
+      </description>
+      <arg name="time" type="uint" summary="timestamp with millisecond granularity"/>
+      <arg name="type" type="uint" enum="trigger_type" summary="the type of trigger that was sent"/>
+    </event>
+    <enum name="error">
+      <entry name="already_set" value="0" summary="property was already set"/>
+    </enum>
+  </interface>
+</protocol>
