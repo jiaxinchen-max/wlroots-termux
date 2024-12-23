@@ -1,3 +1,8 @@
+/* Simple compositor making use of the scene-graph API. Input is unimplemented.
+ *
+ * New surfaces are stacked on top of the existing ones as they appear.
+ */
+
 #include <assert.h>
 #include <getopt.h>
 #include <stdbool.h>
@@ -14,10 +19,6 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
-
-/* Simple compositor making use of the scene-graph API. Input is unimplemented.
- *
- * New surfaces are stacked on top of the existing ones as they appear. */
 
 static const int border_width = 3;
 

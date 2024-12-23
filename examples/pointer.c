@@ -1,3 +1,10 @@
+/* Paints a cursor and moves it based on pointer, touch and tablet events.
+ *
+ * Left, middle and right pointer buttons change the background color to blue,
+ * green and red respectively. Axis pointer events change the brightness of the
+ * background color.
+ */
+
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>

@@ -1,3 +1,8 @@
+/* Bounces a cat picture inside an output layout.
+ *
+ * Arrow keys nudge the cat in a direction.
+ */
+
 #include <drm_fourcc.h>
 #include <limits.h>
 #include <math.h>

@@ -1,3 +1,5 @@
+/* Animates the background color. */
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>

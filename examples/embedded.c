@@ -1,3 +1,9 @@
+/* Embed a minimal xdg-shell compositor backed by a scene-graph into a
+ * wl_subsurface displayed inside a parent Wayland compositor.
+ *
+ * Input is unimplemented.
+ */
+
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <GLES2/gl2.h>

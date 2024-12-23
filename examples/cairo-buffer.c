@@ -1,3 +1,7 @@
+/* Simple scene-graph example with a custom buffer drawn by Cairo.
+ *
+ * Input is unimplemented. Surfaces are unimplemented.
+ */
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -12,10 +16,6 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/log.h>
 #include <wlr/interfaces/wlr_buffer.h>
-
-/* Simple scene-graph example with a custom buffer drawn by Cairo.
- *
- * Input is unimplemented. Surfaces are unimplemented. */
 
 struct cairo_buffer {
 	struct wlr_buffer base;

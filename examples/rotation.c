@@ -1,3 +1,10 @@
+/* Scrolls across a mosaic of cats.
+ *
+ * Arrow keys change the scroll direction.
+ *
+ * The -r CLI option sets the output transform.
+ */
+
 #include <drm_fourcc.h>
 #include <getopt.h>
 #include <math.h>

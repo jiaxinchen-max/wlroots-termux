@@ -1,3 +1,7 @@
+/*
+ * A minimal fullscreen-shell server. It only supports rendering.
+ */
+
 #include <getopt.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -15,10 +19,6 @@
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
 #include <wlr/util/transform.h>
-
-/**
- * A minimal fullscreen-shell server. It only supports rendering.
- */
 
 struct fullscreen_server {
 	struct wl_display *wl_display;

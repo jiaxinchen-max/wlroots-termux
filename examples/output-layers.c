@@ -1,3 +1,11 @@
+/* Simple compositor making use of the output layers API. The compositor will
+ * attempt to display client surfaces with output layers. Input is
+ * unimplemented.
+ *
+ * New surfaces are stacked on top of the existing ones as they appear.
+ * Surfaces that don't make it into an output layer are rendered as usual.
+ */
+
 #include <getopt.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -15,13 +23,6 @@
 #include <wlr/types/wlr_output_layer.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
-
-/* Simple compositor making use of the output layers API. The compositor will
- * attempt to display client surfaces with output layers. Input is
- * unimplemented.
- *
- * New surfaces are stacked on top of the existing ones as they appear.
- * Surfaces that don't make it into an output layer are rendered as usual. */
 
 struct server {
 	struct wl_display *wl_display;
