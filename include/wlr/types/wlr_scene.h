@@ -316,6 +316,15 @@ void wlr_scene_node_for_each_buffer(struct wlr_scene_node *node,
  */
 struct wlr_scene_node *wlr_scene_node_at(struct wlr_scene_node *node,
 	double lx, double ly, double *nx, double *ny);
+/**
+ * Create a new scene node which represents a snapshot of another node.
+ *
+ * The snapshot displays the same contents as the source node at the time of
+ * its creation. The snapshot is completely independent from the source node:
+ * when the source node is updated, the snapshot will stay as-is.
+ */
+struct wlr_scene_node *wlr_scene_node_snapshot(struct wlr_scene_node *node,
+	struct wlr_scene_tree *parent);
 
 /**
  * Create a new scene-graph.
