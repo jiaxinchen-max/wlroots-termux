@@ -12,6 +12,7 @@ struct wlr_gbm_buffer {
 	struct wl_list link; // wlr_gbm_allocator.buffers
 
 	struct gbm_bo *gbm_bo; // NULL if the gbm_device has been destroyed
+	void *gbm_map_data; // NULL unless we have an active mapping
 	struct wlr_dmabuf_attributes dmabuf;
 };
 

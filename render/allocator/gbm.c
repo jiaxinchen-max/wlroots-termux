@@ -173,9 +173,51 @@ static bool buffer_get_dmabuf(struct wlr_buffer *wlr_buffer,
 	return true;
 }
 
+static bool gbm_buffer_begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
+		uint32_t flags, void **data_ptr, uint32_t *format_ptr, size_t *stride_ptr) {
+	struct wlr_gbm_buffer *buffer = get_gbm_buffer_from_buffer(wlr_buffer);
+
+	if (buffer->gbm_bo == NULL) {
+		return false;
+	}
+
+	uint32_t gbm_flags = 0;
+	if (flags & WLR_BUFFER_DATA_PTR_ACCESS_READ) {
+		gbm_flags |= GBM_BO_TRANSFER_READ;
+	}
+	if (flags & WLR_BUFFER_DATA_PTR_ACCESS_WRITE) {
+		gbm_flags |= GBM_BO_TRANSFER_WRITE;
+	}
+
+	uint32_t stride = 0;
+	void *gbm_map_data = NULL;
+	void *data = gbm_bo_map(buffer->gbm_bo, 0, 0,
+		wlr_buffer->width, wlr_buffer->height, gbm_flags, &stride, &gbm_map_data);
+	if (data == NULL) {
+		wlr_log_errno(WLR_ERROR, "gbm_bo_map failed");
+		return false;
+	}
+
+	*data_ptr = data;
+	*format_ptr = buffer->dmabuf.format;
+	*stride_ptr = stride;
+	assert(buffer->gbm_map_data == NULL);
+	buffer->gbm_map_data = gbm_map_data;
+	return true;
+}
+
+static void gbm_buffer_end_data_ptr_access(struct wlr_buffer *wlr_buffer) {
+	struct wlr_gbm_buffer *buffer = get_gbm_buffer_from_buffer(wlr_buffer);
+	assert(buffer->gbm_bo != NULL);
+	gbm_bo_unmap(buffer->gbm_bo, buffer->gbm_map_data);
+	buffer->gbm_map_data = NULL;
+}
+
 static const struct wlr_buffer_impl buffer_impl = {
 	.destroy = buffer_destroy,
 	.get_dmabuf = buffer_get_dmabuf,
+	.begin_data_ptr_access = gbm_buffer_begin_data_ptr_access,
+	.end_data_ptr_access = gbm_buffer_end_data_ptr_access,
 };
 
 static const struct wlr_allocator_interface allocator_impl;
