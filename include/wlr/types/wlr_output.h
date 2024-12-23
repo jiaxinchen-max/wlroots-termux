@@ -68,12 +68,12 @@ enum wlr_output_state_field {
 	WLR_OUTPUT_STATE_SCALE = 1 << 4,
 	WLR_OUTPUT_STATE_TRANSFORM = 1 << 5,
 	WLR_OUTPUT_STATE_ADAPTIVE_SYNC_ENABLED = 1 << 6,
-	WLR_OUTPUT_STATE_GAMMA_LUT = 1 << 7,
-	WLR_OUTPUT_STATE_RENDER_FORMAT = 1 << 8,
-	WLR_OUTPUT_STATE_SUBPIXEL = 1 << 9,
-	WLR_OUTPUT_STATE_LAYERS = 1 << 10,
-	WLR_OUTPUT_STATE_WAIT_TIMELINE = 1 << 11,
-	WLR_OUTPUT_STATE_SIGNAL_TIMELINE = 1 << 12,
+	WLR_OUTPUT_STATE_RENDER_FORMAT = 1 << 7,
+	WLR_OUTPUT_STATE_SUBPIXEL = 1 << 8,
+	WLR_OUTPUT_STATE_LAYERS = 1 << 9,
+	WLR_OUTPUT_STATE_WAIT_TIMELINE = 1 << 10,
+	WLR_OUTPUT_STATE_SIGNAL_TIMELINE = 1 << 11,
+	WLR_OUTPUT_STATE_COLOR_TRANSFORM = 1 << 12,
 };
 
 enum wlr_output_state_mode_type {
@@ -122,9 +122,6 @@ struct wlr_output_state {
 		int32_t refresh; // mHz, may be zero
 	} custom_mode;
 
-	uint16_t *gamma_lut;
-	size_t gamma_lut_size;
-
 	struct wlr_output_layer_state *layers;
 	size_t layers_len;
 
@@ -132,6 +129,8 @@ struct wlr_output_state {
 	uint64_t wait_point;
 	struct wlr_drm_syncobj_timeline *signal_timeline;
 	uint64_t signal_point;
+
+	struct wlr_color_transform *color_transform;
 };
 
 struct wlr_output_impl;
@@ -530,17 +529,6 @@ void wlr_output_state_set_subpixel(struct wlr_output_state *state,
 void wlr_output_state_set_buffer(struct wlr_output_state *state,
 	struct wlr_buffer *buffer);
 /**
- * Sets the gamma table for an output. `r`, `g` and `b` are gamma ramps for
- * red, green and blue. `size` is the length of the ramps and must not exceed
- * the value returned by wlr_output_get_gamma_size().
- *
- * Providing zero-sized ramps resets the gamma table.
- *
- * This state will be applied once wlr_output_commit_state() is called.
- */
-bool wlr_output_state_set_gamma_lut(struct wlr_output_state *state,
-	size_t ramp_size, const uint16_t *r, const uint16_t *g, const uint16_t *b);
-/**
  * Sets the damage region for an output. This is used as a hint to the backend
  * and can be used to reduce power consumption or increase performance on some
  * devices.
@@ -588,6 +576,13 @@ void wlr_output_state_set_wait_timeline(struct wlr_output_state *state,
  */
 void wlr_output_state_set_signal_timeline(struct wlr_output_state *state,
 	struct wlr_drm_syncobj_timeline *timeline, uint64_t dst_point);
+/**
+ * Set the color transform for an output.
+ *
+ * The color transform is applied after blending output layers.
+ */
+void wlr_output_state_set_color_transform(struct wlr_output_state *state,
+	struct wlr_color_transform *tr);
 
 /**
  * Copies the output state from src to dst. It is safe to then
