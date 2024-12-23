@@ -159,8 +159,10 @@ static void subsurface_tree_handle_surface_commit(struct wl_listener *listener,
 	struct wlr_scene_subsurface_tree *subsurface_tree =
 		wl_container_of(listener, subsurface_tree, surface_commit);
 
-	// TODO: only do this on subsurface order or position change
-	subsurface_tree_reconfigure(subsurface_tree);
+	// TODO: also need to do this on sub-surface position change
+	if (subsurface_tree->surface->current.committed & WLR_SURFACE_STATE_SUBSURFACES) {
+		subsurface_tree_reconfigure(subsurface_tree);
+	}
 }
 
 static void subsurface_tree_handle_subsurface_destroy(struct wl_listener *listener,

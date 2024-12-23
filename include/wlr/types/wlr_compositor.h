@@ -29,6 +29,7 @@ enum wlr_surface_state_field {
 	WLR_SURFACE_STATE_FRAME_CALLBACK_LIST = 1 << 7,
 	WLR_SURFACE_STATE_VIEWPORT = 1 << 8,
 	WLR_SURFACE_STATE_OFFSET = 1 << 9,
+	WLR_SURFACE_STATE_SUBSURFACES = 1 << 10, // sub-surface added or re-ordered
 };
 
 struct wlr_surface_state {
