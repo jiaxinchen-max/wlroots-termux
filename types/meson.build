@@ -42,6 +42,7 @@ wlr_files += files(
 	'wlr_data_control_v1.c',
 	'wlr_drm.c',
 	'wlr_export_dmabuf_v1.c',
+	'wlr_ext_workspace_v1.c',
 	'wlr_foreign_toplevel_management_v1.c',
 	'wlr_ext_foreign_toplevel_list_v1.c',
 	'wlr_fractional_scale_v1.c',
