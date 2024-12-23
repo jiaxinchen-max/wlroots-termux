@@ -26,7 +26,7 @@ void wlr_box_closest_point(const struct wlr_box *box, double x, double y,
 
 	// find the closest x point
 	if (x < box->x) {
-		*dest_x = box->x;
+		*dest_x = box->x + x - 1/65536.0;
 	} else if (x > box->x + box->width - 1/65536.0) {
 		*dest_x = box->x + box->width - 1/65536.0;
 	} else {
@@ -35,7 +35,7 @@ void wlr_box_closest_point(const struct wlr_box *box, double x, double y,
 
 	// find closest y point
 	if (y < box->y) {
-		*dest_y = box->y;
+		*dest_y = box->y + y - 1/65536.0;
 	} else if (y > box->y + box->height - 1/65536.0) {
 		*dest_y = box->y + box->height - 1/65536.0;
 	} else {
