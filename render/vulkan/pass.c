@@ -179,44 +179,41 @@ static bool render_pass_submit(struct wlr_render_pass *wlr_pass) {
 			.uv_size = { 1, 1 },
 		};
 
-		size_t dim = 1;
-		if (pass->color_transform && pass->color_transform->type == COLOR_TRANSFORM_LUT_3D) {
-			struct wlr_color_transform_lut3d *lut3d =
-				wlr_color_transform_lut3d_from_base(pass->color_transform);
-			dim = lut3d->dim_len;
-		}
-
-		struct wlr_vk_frag_output_pcr_data frag_pcr_data = {
-			.lut_3d_offset = 0.5f / dim,
-			.lut_3d_scale = (float)(dim - 1) / dim,
-		};
 		mat3_to_mat4(final_matrix, vert_pcr_data.mat4);
-
-		if (pass->color_transform) {
-			bind_pipeline(pass, render_buffer->plain.render_setup->output_pipe_lut3d);
-		} else {
-			bind_pipeline(pass, render_buffer->plain.render_setup->output_pipe_srgb);
-		}
 		vkCmdPushConstants(render_cb->vk, renderer->output_pipe_layout,
 			VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vert_pcr_data), &vert_pcr_data);
-		vkCmdPushConstants(render_cb->vk, renderer->output_pipe_layout,
-			VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(vert_pcr_data),
-			sizeof(frag_pcr_data), &frag_pcr_data);
 
-		VkDescriptorSet lut_ds;
-		if (pass->color_transform && pass->color_transform->type == COLOR_TRANSFORM_LUT_3D) {
-			struct wlr_vk_color_transform *transform =
-				get_color_transform(pass->color_transform, renderer);
-			assert(transform);
-			lut_ds = transform->lut_3d.ds;
-		} else {
-			lut_ds = renderer->output_ds_lut3d_dummy;
+		VkDescriptorSet ds[2];
+		size_t ds_len = 0;
+		ds[ds_len++] = render_buffer->plain.blend_descriptor_set;
+
+		VkPipeline pl = render_buffer->plain.render_setup->output_pipe_srgb;
+		if (pass->color_transform) {
+			switch (pass->color_transform->type){
+			case COLOR_TRANSFORM_LUT_3D: {
+				pl = render_buffer->plain.render_setup->output_pipe_lut3d;
+				struct wlr_vk_color_transform *transform =
+					get_color_transform(pass->color_transform, renderer);
+				ds[ds_len++] = transform->lut_3d.ds;
+
+				struct wlr_color_transform_lut3d *lut =
+					wlr_color_transform_lut3d_from_base(pass->color_transform);
+				struct wlr_vk_frag_output_pcr_data frag_pcr_data = {
+					.lut_3d_offset = 0.5f / lut->dim_len,
+					.lut_3d_scale = (float)(lut->dim_len - 1) / lut->dim_len,
+				};
+				vkCmdPushConstants(render_cb->vk, renderer->output_pipe_layout,
+					VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(vert_pcr_data),
+					sizeof(frag_pcr_data), &frag_pcr_data);
+
+				break;
+			}
+			case COLOR_TRANSFORM_SRGB:
+				break;
+			}
 		}
-		VkDescriptorSet ds[] = {
-			render_buffer->plain.blend_descriptor_set, // set 0
-			lut_ds, // set 1
-		};
-		size_t ds_len = sizeof(ds) / sizeof(ds[0]);
+
+		bind_pipeline(pass, pl);
 		vkCmdBindDescriptorSets(render_cb->vk,
 			VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->output_pipe_layout,
 			0, ds_len, ds, 0, NULL);
@@ -1098,14 +1095,6 @@ struct wlr_vk_render_pass *vulkan_begin_render_pass(struct wlr_vk_renderer *rend
 		vulkan_reset_command_buffer(cb);
 		free(pass);
 		return NULL;
-	}
-
-	if (!renderer->dummy3d_image_transitioned) {
-		renderer->dummy3d_image_transitioned = true;
-		vulkan_change_layout(cb->vk, renderer->dummy3d_image,
-			VK_IMAGE_LAYOUT_UNDEFINED, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, VK_ACCESS_SHADER_READ_BIT);
 	}
 
 	int width = buffer->wlr_buffer->width;

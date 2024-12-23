@@ -25,7 +25,8 @@
 #include "render/vulkan/shaders/common.vert.h"
 #include "render/vulkan/shaders/texture.frag.h"
 #include "render/vulkan/shaders/quad.frag.h"
-#include "render/vulkan/shaders/output.frag.h"
+#include "render/vulkan/shaders/output_inverse_rgb.frag.h"
+#include "render/vulkan/shaders/output_lut_3d.frag.h"
 #include "types/wlr_buffer.h"
 #include "types/wlr_matrix.h"
 #include "util/time.h"
@@ -1121,7 +1122,8 @@ static void vulkan_destroy(struct wlr_renderer *wlr_renderer) {
 	vkDestroyShaderModule(dev->dev, renderer->vert_module, NULL);
 	vkDestroyShaderModule(dev->dev, renderer->tex_frag_module, NULL);
 	vkDestroyShaderModule(dev->dev, renderer->quad_frag_module, NULL);
-	vkDestroyShaderModule(dev->dev, renderer->output_module, NULL);
+	vkDestroyShaderModule(dev->dev, renderer->output_module_srgb, NULL);
+	vkDestroyShaderModule(dev->dev, renderer->output_module_3d_lut, NULL);
 
 	struct wlr_vk_pipeline_layout *pipeline_layout, *pipeline_layout_tmp;
 	wl_list_for_each_safe(pipeline_layout, pipeline_layout_tmp,
@@ -1132,10 +1134,6 @@ static void vulkan_destroy(struct wlr_renderer *wlr_renderer) {
 		vkDestroySamplerYcbcrConversion(dev->dev, pipeline_layout->ycbcr.conversion, NULL);
 		free(pipeline_layout);
 	}
-
-	vkDestroyImageView(dev->dev, renderer->dummy3d_image_view, NULL);
-	vkDestroyImage(dev->dev, renderer->dummy3d_image, NULL);
-	vkFreeMemory(dev->dev, renderer->dummy3d_mem, NULL);
 
 	vkDestroySemaphore(dev->dev, renderer->timeline_semaphore, NULL);
 	vkDestroyPipelineLayout(dev->dev, renderer->output_pipe_layout, NULL);
@@ -1801,18 +1799,15 @@ static bool init_blend_to_output_pipeline(struct wlr_vk_renderer *renderer,
 	VkResult res;
 	VkDevice dev = renderer->dev->dev;
 
-	uint32_t output_transform_type = transform;
-	VkSpecializationMapEntry spec_entry = {
-		.constantID = 0,
-		.offset = 0,
-		.size = sizeof(uint32_t),
-	};
-	VkSpecializationInfo specialization = {
-		.mapEntryCount = 1,
-		.pMapEntries = &spec_entry,
-		.dataSize = sizeof(uint32_t),
-		.pData = &output_transform_type,
-	};
+	VkShaderModule output_module;
+	switch(transform) {
+	case WLR_VK_OUTPUT_TRANSFORM_INVERSE_SRGB:
+		output_module = renderer->output_module_srgb;
+		break;
+	case WLR_VK_OUTPUT_TRANSFORM_LUT3D:
+		output_module = renderer->output_module_3d_lut;
+		break;
+	}
 
 	VkPipelineShaderStageCreateInfo tex_stages[2] = {
 		{
@@ -1824,9 +1819,8 @@ static bool init_blend_to_output_pipeline(struct wlr_vk_renderer *renderer,
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-			.module = renderer->output_module,
+			.module = output_module,
 			.pName = "main",
-			.pSpecializationInfo = &specialization,
 		},
 	};
 
@@ -1993,105 +1987,6 @@ struct wlr_vk_pipeline_layout *get_or_create_pipeline_layout(
 }
 
 
-/* The fragment shader for the blend->image subpass can be configured to either
- * use or not a sampler3d lookup table; however, even if the shader does not use
- * the sampler, a valid descriptor set should be bound. Create that here, linked to
- * a 1x1x1 image.
- */
-static bool init_dummy_images(struct wlr_vk_renderer *renderer) {
-	VkResult res;
-	VkDevice dev = renderer->dev->dev;
-
-	VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
-
-	VkImageCreateInfo img_info = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-		.imageType = VK_IMAGE_TYPE_3D,
-		.format = format,
-		.mipLevels = 1,
-		.arrayLayers = 1,
-		.samples = VK_SAMPLE_COUNT_1_BIT,
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-		.extent = (VkExtent3D) { 1, 1, 1 },
-		.tiling = VK_IMAGE_TILING_OPTIMAL,
-		.usage = VK_IMAGE_USAGE_SAMPLED_BIT,
-	};
-	res = vkCreateImage(dev, &img_info, NULL, &renderer->dummy3d_image);
-	if (res != VK_SUCCESS) {
-		wlr_vk_error("vkCreateImage failed", res);
-		return false;
-	}
-
-	VkMemoryRequirements mem_reqs = {0};
-	vkGetImageMemoryRequirements(dev, renderer->dummy3d_image, &mem_reqs);
-	int mem_type_index = vulkan_find_mem_type(renderer->dev,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, mem_reqs.memoryTypeBits);
-	if (mem_type_index == -1) {
-		wlr_log(WLR_ERROR, "Failed to find suitable memory type");
-		return false;
-	}
-	VkMemoryAllocateInfo mem_info = {
-		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-		.allocationSize = mem_reqs.size,
-		.memoryTypeIndex = mem_type_index,
-	};
-	res = vkAllocateMemory(dev, &mem_info, NULL, &renderer->dummy3d_mem);
-	if (res != VK_SUCCESS) {
-		wlr_vk_error("vkAllocateMemory failed", res);
-		return false;
-	}
-	res = vkBindImageMemory(dev, renderer->dummy3d_image, renderer->dummy3d_mem, 0);
-	if (res != VK_SUCCESS) {
-		wlr_vk_error("vkBindMemory failed", res);
-		return false;
-	}
-
-	VkImageViewCreateInfo view_info = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.viewType = VK_IMAGE_VIEW_TYPE_3D,
-		.format = format,
-		.components.r = VK_COMPONENT_SWIZZLE_IDENTITY,
-		.components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
-		.components.b = VK_COMPONENT_SWIZZLE_IDENTITY,
-		.components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
-		.subresourceRange = (VkImageSubresourceRange) {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-			.baseMipLevel = 0,
-			.levelCount = 1,
-			.baseArrayLayer = 0,
-			.layerCount = 1,
-		},
-		.image = renderer->dummy3d_image,
-	};
-	res = vkCreateImageView(dev, &view_info, NULL, &renderer->dummy3d_image_view);
-	if (res != VK_SUCCESS) {
-		wlr_vk_error("vkCreateImageView failed", res);
-		return false;
-	}
-
-	renderer->output_ds_lut3d_dummy_pool = vulkan_alloc_texture_ds(renderer,
-		renderer->output_ds_lut3d_layout, &renderer->output_ds_lut3d_dummy);
-	if (!renderer->output_ds_lut3d_dummy_pool) {
-		wlr_log(WLR_ERROR, "Failed to allocate descriptor");
-		return false;
-	}
-	VkDescriptorImageInfo ds_img_info = {
-		.imageView = renderer->dummy3d_image_view,
-		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-	};
-	VkWriteDescriptorSet ds_write = {
-		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-		.descriptorCount = 1,
-		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		.dstSet = renderer->output_ds_lut3d_dummy,
-		.pImageInfo = &ds_img_info,
-	};
-	vkUpdateDescriptorSets(dev, 1, &ds_write, 0, NULL);
-
-	return true;
-}
-
 // Creates static render data, such as sampler, layouts and shader modules
 // for the given renderer.
 // Cleanup is done by destroying the renderer.
@@ -2100,10 +1995,6 @@ static bool init_static_render_data(struct wlr_vk_renderer *renderer) {
 	VkDevice dev = renderer->dev->dev;
 
 	if (!init_blend_to_output_layouts(renderer)) {
-		return false;
-	}
-
-	if (!init_dummy_images(renderer)) {
 		return false;
 	}
 
@@ -2144,12 +2035,25 @@ static bool init_static_render_data(struct wlr_vk_renderer *renderer) {
 
 	sinfo = (VkShaderModuleCreateInfo){
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-		.codeSize = sizeof(output_frag_data),
-		.pCode = output_frag_data,
+		.codeSize = sizeof(output_inverse_rgb_data),
+		.pCode = output_inverse_rgb_data,
 	};
-	res = vkCreateShaderModule(dev, &sinfo, NULL, &renderer->output_module);
+
+	res = vkCreateShaderModule(dev, &sinfo, NULL, &renderer->output_module_srgb);
 	if (res != VK_SUCCESS) {
-		wlr_vk_error("Failed to create blend->output fragment shader module", res);
+		wlr_vk_error("Failed to create blend->output fragment shader module for srgb", res);
+		return false;
+	}
+
+	sinfo = (VkShaderModuleCreateInfo){
+		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		.codeSize = sizeof(output_lut_3d_data),
+		.pCode = output_lut_3d_data,
+	};
+
+	res = vkCreateShaderModule(dev, &sinfo, NULL, &renderer->output_module_3d_lut);
+	if (res != VK_SUCCESS) {
+		wlr_vk_error("Failed to create blend->output fragment shader module for 3d lut", res);
 		return false;
 	}
 
