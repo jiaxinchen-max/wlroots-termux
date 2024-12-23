@@ -1180,7 +1180,7 @@ static bool drm_connector_move_cursor(struct wlr_output *output,
 	struct wlr_box box = { .x = x, .y = y };
 
 	int width, height;
-	wlr_output_transformed_resolution(output, &width, &height);
+	wlr_output_transformed_resolution(output, NULL, &width, &height);
 
 	enum wl_output_transform transform =
 		wlr_output_transform_invert(output->transform);

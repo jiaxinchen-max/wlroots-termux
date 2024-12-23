@@ -427,21 +427,32 @@ void wlr_output_destroy(struct wlr_output *output) {
 }
 
 void wlr_output_transformed_resolution(struct wlr_output *output,
-		int *width, int *height) {
-	if (output->transform % 2 == 0) {
-		*width = output->width;
-		*height = output->height;
-	} else {
-		*width = output->height;
-		*height = output->width;
+		const struct wlr_output_state *state, int *width, int *height) {
+	output_pending_resolution(output, state, width, height);
+
+	enum wl_output_transform transform = output->transform;
+	if (state && state->committed & WLR_OUTPUT_STATE_TRANSFORM) {
+		transform = state->transform;
+	}
+
+	if (transform % 2 != 0) {
+		int tmp = *width;
+		*width = *height;
+		*height = tmp;
 	}
 }
 
 void wlr_output_effective_resolution(struct wlr_output *output,
-		int *width, int *height) {
-	wlr_output_transformed_resolution(output, width, height);
-	*width /= output->scale;
-	*height /= output->scale;
+	const struct wlr_output_state *state, int *width, int *height) {
+	wlr_output_transformed_resolution(output, state, width, height);
+
+	float scale = output->scale;
+	if (state && state->committed & WLR_OUTPUT_STATE_SCALE) {
+		scale = state->scale;
+	}
+
+	*width /= scale;
+	*height /= scale;
 }
 
 struct wlr_output_mode *wlr_output_preferred_mode(struct wlr_output *output) {
@@ -462,7 +473,7 @@ struct wlr_output_mode *wlr_output_preferred_mode(struct wlr_output *output) {
 
 void output_pending_resolution(struct wlr_output *output,
 		const struct wlr_output_state *state, int *width, int *height) {
-	if (state->committed & WLR_OUTPUT_STATE_MODE) {
+	if (state && state->committed & WLR_OUTPUT_STATE_MODE) {
 		switch (state->mode_type) {
 		case WLR_OUTPUT_STATE_MODE_FIXED:
 			*width = state->mode->width;
@@ -596,6 +607,12 @@ static bool output_basic_test(struct wlr_output *output,
 		}
 	}
 
+	if ((state->committed & WLR_OUTPUT_STATE_RENDER_FORMAT) &&
+			(state->committed & WLR_OUTPUT_STATE_BUFFER) == 0) {
+		wlr_log(WLR_DEBUG, "Tried to change the render format without a buffer.");
+		return false;
+	}
+
 	if (state->committed & WLR_OUTPUT_STATE_RENDER_FORMAT) {
 		struct wlr_allocator *allocator = output->allocator;
 		assert(allocator != NULL);
@@ -611,8 +628,13 @@ static bool output_basic_test(struct wlr_output *output,
 		wlr_drm_format_finish(&format);
 	}
 
-	bool enabled = output_pending_enabled(output, state);
+	if ((state->committed & WLR_OUTPUT_STATE_ENABLED) && state->enabled &&
+			(state->committed & WLR_OUTPUT_STATE_BUFFER) == 0) {
+		wlr_log(WLR_DEBUG, "Tried to enable an output without a buffer");
+		return false;
+	}
 
+	bool enabled = output_pending_enabled(output, state);
 	if (enabled && (state->committed & (WLR_OUTPUT_STATE_ENABLED |
 			WLR_OUTPUT_STATE_MODE))) {
 		int pending_width, pending_height;
@@ -685,16 +707,7 @@ bool wlr_output_test_state(struct wlr_output *output,
 		return true;
 	}
 
-	bool new_back_buffer = false;
-	if (!output_ensure_buffer(output, &copy, &new_back_buffer)) {
-		return false;
-	}
-
-	bool success = output->impl->test(output, &copy);
-	if (new_back_buffer) {
-		wlr_buffer_unlock(copy.buffer);
-	}
-	return success;
+	return output->impl->test(output, &copy);
 }
 
 bool output_prepare_commit(struct wlr_output *output, const struct wlr_output_state *state) {
@@ -756,27 +769,15 @@ bool wlr_output_commit_state(struct wlr_output *output,
 		return false;
 	}
 
-	bool new_back_buffer = false;
-	if (!output_ensure_buffer(output, &pending, &new_back_buffer)) {
-		return false;
-	}
-
 	if (!output_prepare_commit(output, &pending)) {
 		return false;
 	}
 
 	if (!output->impl->commit(output, &pending)) {
-		if (new_back_buffer) {
-			wlr_buffer_unlock(pending.buffer);
-		}
 		return false;
 	}
 
 	output_apply_commit(output, &pending);
-
-	if (new_back_buffer) {
-		wlr_buffer_unlock(pending.buffer);
-	}
 
 	return true;
 }

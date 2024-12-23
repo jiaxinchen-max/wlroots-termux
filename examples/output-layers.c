@@ -61,8 +61,9 @@ struct output {
 	struct wl_listener frame;
 };
 
-static void output_handle_frame(struct wl_listener *listener, void *data) {
-	struct output *output = wl_container_of(listener, output, frame);
+static void render_and_commit(struct output *output, struct wlr_output_state *state) {
+	int width, height;
+	wlr_output_effective_resolution(output->wlr_output, state, &width, &height);
 
 	struct wl_array layers_arr = {0};
 	struct output_surface *output_surface;
@@ -81,22 +82,19 @@ static void output_handle_frame(struct wl_listener *listener, void *data) {
 		};
 	}
 
-	struct wlr_output_state output_state;
-	wlr_output_state_init(&output_state);
-	wlr_output_state_set_layers(&output_state, layers_arr.data,
-		layers_arr.size / sizeof(struct wlr_output_layer_state));
+	// don't submit output layers for modeset or enable.
+	if ((state->committed & (WLR_OUTPUT_STATE_MODE | WLR_OUTPUT_STATE_ENABLED)) == 0) {
+		wlr_output_state_set_layers(state, layers_arr.data,
+			layers_arr.size / sizeof(struct wlr_output_layer_state));
 
-	if (!wlr_output_test_state(output->wlr_output, &output_state)) {
-		wlr_log(WLR_ERROR, "wlr_output_test_state() failed");
-		return;
+		if (!wlr_output_test_state(output->wlr_output, state)) {
+			wlr_log(WLR_ERROR, "wlr_output_test_state() failed");
+			return;
+		}
 	}
 
-	int width, height;
-	wlr_output_effective_resolution(output->wlr_output, &width, &height);
-
-	struct wlr_render_pass *pass = wlr_output_begin_render_pass(output->wlr_output, &output_state, NULL);
+	struct wlr_render_pass *pass = wlr_output_begin_render_pass(output->wlr_output, state, NULL);
 	wlr_render_pass_add_rect(pass, &(struct wlr_render_rect_options){
-		.box = { .width = width, .height = height },
 		.color = { 0.3, 0.3, 0.3, 1 },
 	});
 
@@ -125,9 +123,6 @@ static void output_handle_frame(struct wl_listener *listener, void *data) {
 
 	wlr_render_pass_submit(pass);
 
-	wlr_output_commit_state(output->wlr_output, &output_state);
-	wlr_output_state_finish(&output_state);
-
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
@@ -154,7 +149,17 @@ static void output_handle_frame(struct wl_listener *listener, void *data) {
 		output_surface->first_commit = false;
 	}
 
+	wlr_output_commit_state(output->wlr_output, state);
 	wl_array_release(&layers_arr);
+}
+
+static void output_handle_frame(struct wl_listener *listener, void *data) {
+	struct output *output = wl_container_of(listener, output, frame);
+
+	struct wlr_output_state output_state;
+	wlr_output_state_init(&output_state);
+	render_and_commit(output, &output_state);
+	wlr_output_state_finish(&output_state);
 }
 
 static void server_handle_new_output(struct wl_listener *listener, void *data) {
@@ -178,7 +183,7 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 	if (mode != NULL) {
 		wlr_output_state_set_mode(&state, mode);
 	}
-	wlr_output_commit_state(wlr_output, &state);
+	render_and_commit(output, &state);
 	wlr_output_state_finish(&state);
 
 	wlr_output_create_global(wlr_output, server->wl_display);

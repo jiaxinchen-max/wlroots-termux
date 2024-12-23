@@ -47,27 +47,25 @@ struct sample_keyboard {
 	struct wl_listener destroy;
 };
 
-static void output_frame_notify(struct wl_listener *listener, void *data) {
-	struct sample_output *sample_output = wl_container_of(listener, sample_output, frame);
-	struct sample_state *sample = sample_output->sample;
-	struct wlr_output *wlr_output = sample_output->output;
+static void render (struct sample_output *output, struct wlr_output_state *state) {
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
-	int32_t width, height;
-	wlr_output_effective_resolution(wlr_output, &width, &height);
 
-	struct wlr_output_state output_state;
-	wlr_output_state_init(&output_state);
-	struct wlr_render_pass *pass = wlr_output_begin_render_pass(wlr_output, &output_state, NULL);
+	struct sample_state *sample = output->sample;
+	struct wlr_output *wlr_output = output->output;
+	struct wlr_render_pass *pass = wlr_output_begin_render_pass(wlr_output, state, NULL);
+
+	int32_t width, height;
+	wlr_output_effective_resolution(wlr_output, state, &width, &height);
+
 
 	wlr_render_pass_add_rect(pass, &(struct wlr_render_rect_options){
-		.box = { .width = wlr_output->width, .height = wlr_output->height },
 		.color = { 0.25, 0.25, 0.25, 1 },
 	});
 
-	for (int y = -128 + (int)sample_output->y_offs; y < height; y += 128) {
-		for (int x = -128 + (int)sample_output->x_offs; x < width; x += 128) {
+	for (int y = -128 + (int)output->y_offs; y < height; y += 128) {
+		for (int x = -128 + (int)output->x_offs; x < width; x += 128) {
 			wlr_render_pass_add_texture(pass, &(struct wlr_render_texture_options){
 				.texture = sample->cat_texture,
 				.dst_box = { .x = x, .y = y },
@@ -77,22 +75,30 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
 	}
 
 	wlr_render_pass_submit(pass);
-	wlr_output_commit_state(wlr_output, &output_state);
-	wlr_output_state_finish(&output_state);
 
 	long ms = (now.tv_sec - sample->last_frame.tv_sec) * 1000 +
 		(now.tv_nsec - sample->last_frame.tv_nsec) / 1000000;
 	float seconds = ms / 1000.0f;
+	output->x_offs += output->x_vel * seconds;
+	output->y_offs += output->y_vel * seconds;
+	if (output->x_offs > 128) {
+		output->x_offs = 0;
+	}
+	if (output->y_offs > 128) {
+		output->y_offs = 0;
+	}
 
-	sample_output->x_offs += sample_output->x_vel * seconds;
-	sample_output->y_offs += sample_output->y_vel * seconds;
-	if (sample_output->x_offs > 128) {
-		sample_output->x_offs = 0;
-	}
-	if (sample_output->y_offs > 128) {
-		sample_output->y_offs = 0;
-	}
 	sample->last_frame = now;
+}
+
+static void output_frame_notify(struct wl_listener *listener, void *data) {
+	struct sample_output *sample_output = wl_container_of(listener, sample_output, frame);
+
+	struct wlr_output_state output_state;
+	wlr_output_state_init(&output_state);
+	render(sample_output, &output_state);
+	wlr_output_commit_state(sample_output->output, &output_state);
+	wlr_output_state_finish(&output_state);
 }
 
 static void update_velocities(struct sample_state *sample,
@@ -137,6 +143,7 @@ static void new_output_notify(struct wl_listener *listener, void *data) {
 	if (mode != NULL) {
 		wlr_output_state_set_mode(&state, mode);
 	}
+	render(sample_output, &state);
 	wlr_output_commit_state(output, &state);
 	wlr_output_state_finish(&state);
 }

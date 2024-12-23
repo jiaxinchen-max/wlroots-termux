@@ -604,6 +604,20 @@ static void server_new_output(struct wl_listener *listener, void *data) {
 	 * and our renderer. Must be done once, before commiting the output */
 	wlr_output_init_render(wlr_output, server->allocator, server->renderer);
 
+	/* Adds this to the output layout. The add_auto function arranges outputs
+	 * from left-to-right in the order they appear. A more sophisticated
+	 * compositor would let the user configure the arrangement of outputs in the
+	 * layout.
+	 *
+	 * The output layout utility automatically adds a wl_output global to the
+	 * display, which Wayland clients can see to find out information about the
+	 * output (such as DPI, scale factor, manufacturer, etc).
+	 */
+	struct wlr_output_layout_output *l_output = wlr_output_layout_add_auto(server->output_layout,
+		wlr_output);
+	struct wlr_scene_output *scene_output = wlr_scene_output_create(server->scene, wlr_output);
+	wlr_scene_output_layout_add_output(server->scene_layout, l_output, scene_output);
+
 	/* The output may be disabled, switch it on. */
 	struct wlr_output_state state;
 	wlr_output_state_init(&state);
@@ -618,6 +632,11 @@ static void server_new_output(struct wl_listener *listener, void *data) {
 	if (mode != NULL) {
 		wlr_output_state_set_mode(&state, mode);
 	}
+
+	/* When enabling an output, wlroots requires that a buffer is also included
+	 * in that commit to enable the output.
+	 */
+	wlr_scene_output_build_state(scene_output, &state, NULL);
 
 	/* Atomically applies the new output state. */
 	wlr_output_commit_state(wlr_output, &state);
@@ -641,20 +660,6 @@ static void server_new_output(struct wl_listener *listener, void *data) {
 	wl_signal_add(&wlr_output->events.destroy, &output->destroy);
 
 	wl_list_insert(&server->outputs, &output->link);
-
-	/* Adds this to the output layout. The add_auto function arranges outputs
-	 * from left-to-right in the order they appear. A more sophisticated
-	 * compositor would let the user configure the arrangement of outputs in the
-	 * layout.
-	 *
-	 * The output layout utility automatically adds a wl_output global to the
-	 * display, which Wayland clients can see to find out information about the
-	 * output (such as DPI, scale factor, manufacturer, etc).
-	 */
-	struct wlr_output_layout_output *l_output = wlr_output_layout_add_auto(server->output_layout,
-		wlr_output);
-	struct wlr_scene_output *scene_output = wlr_scene_output_create(server->scene, wlr_output);
-	wlr_scene_output_layout_add_output(server->scene_layout, l_output, scene_output);
 }
 
 static void xdg_toplevel_map(struct wl_listener *listener, void *data) {

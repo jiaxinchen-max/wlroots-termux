@@ -77,22 +77,18 @@ struct sample_keyboard {
 	struct wl_listener destroy;
 };
 
-static void output_frame_notify(struct wl_listener *listener, void *data) {
-	struct sample_output *sample_output = wl_container_of(listener, sample_output, frame);
-	struct sample_state *sample = sample_output->sample;
-	struct wlr_output *wlr_output = sample_output->output;
+static void render(struct sample_output *output, struct wlr_output_state *state) {
 	struct timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 
+	struct wlr_output *wlr_output = output->output;
+	struct sample_state *sample = output->sample;
+
 	int32_t width, height;
-	wlr_output_effective_resolution(wlr_output, &width, &height);
+	wlr_output_effective_resolution(wlr_output, state, &width, &height);
 
-	struct wlr_output_state output_state;
-	wlr_output_state_init(&output_state);
-	struct wlr_render_pass *pass = wlr_output_begin_render_pass(wlr_output, &output_state, NULL);
-
+	struct wlr_render_pass *pass = wlr_output_begin_render_pass(wlr_output, state, NULL);
 	wlr_render_pass_add_rect(pass, &(struct wlr_render_rect_options){
-		.box = { .width = wlr_output->width, .height = wlr_output->height },
 		.color = { 0.25, 0.25, 0.25, 1 },
 	});
 
@@ -157,9 +153,17 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
 	}
 
 	wlr_render_pass_submit(pass);
-	wlr_output_commit_state(wlr_output, &output_state);
-	wlr_output_state_finish(&output_state);
 	sample->last_frame = now;
+}
+
+static void output_frame_notify(struct wl_listener *listener, void *data) {
+	struct sample_output *sample_output = wl_container_of(listener, sample_output, frame);
+
+	struct wlr_output_state output_state;
+	wlr_output_state_init(&output_state);
+	render(sample_output, &output_state);
+	wlr_output_commit_state(sample_output->output, &output_state);
+	wlr_output_state_finish(&output_state);
 }
 
 static void tablet_tool_axis_notify(struct wl_listener *listener, void *data) {
@@ -285,6 +289,7 @@ static void new_output_notify(struct wl_listener *listener, void *data) {
 	if (mode != NULL) {
 		wlr_output_state_set_mode(&state, mode);
 	}
+	render(sample_output, &state);
 	wlr_output_commit_state(output, &state);
 	wlr_output_state_finish(&state);
 }

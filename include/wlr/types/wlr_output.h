@@ -341,12 +341,12 @@ void wlr_output_destroy(struct wlr_output *output);
  * Computes the transformed output resolution.
  */
 void wlr_output_transformed_resolution(struct wlr_output *output,
-	int *width, int *height);
+	const struct wlr_output_state *state, int *width, int *height);
 /**
  * Computes the transformed and scaled output resolution.
  */
 void wlr_output_effective_resolution(struct wlr_output *output,
-	int *width, int *height);
+	const struct wlr_output_state *state, int *width, int *height);
 /**
  * Test whether this output state would be accepted by the backend. If this
  * function returns true, wlr_output_commit_state() will only fail due to a

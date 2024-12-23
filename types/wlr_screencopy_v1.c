@@ -584,7 +584,7 @@ static void capture_output(struct wl_client *wl_client,
 		buffer_box.height = output->height;
 	} else {
 		int ow, oh;
-		wlr_output_effective_resolution(output, &ow, &oh);
+		wlr_output_effective_resolution(output, NULL, &ow, &oh);
 
 		buffer_box = *box;
 
