@@ -85,7 +85,7 @@ struct wlr_wl_presentation_feedback {
 };
 
 struct wlr_wl_output_layer {
-	struct wlr_addon addon;
+	struct wl_list link; // struct wlr_wl_output.layers
 
 	struct wl_surface *surface;
 	struct wl_subsurface *subsurface;
@@ -131,6 +131,8 @@ struct wlr_wl_output {
 		struct wl_surface *surface;
 		int32_t hotspot_x, hotspot_y;
 	} cursor;
+
+	struct wl_list layers; // struct wlr_wl_output_layer.link
 };
 
 struct wlr_wl_pointer {

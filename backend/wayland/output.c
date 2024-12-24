@@ -515,10 +515,8 @@ static bool output_test(struct wlr_output *wlr_output,
 	return true;
 }
 
-static void output_layer_handle_addon_destroy(struct wlr_addon *addon) {
-	struct wlr_wl_output_layer *layer = wl_container_of(addon, layer, addon);
-
-	wlr_addon_finish(&layer->addon);
+static void output_layer_destroy(struct wlr_wl_output_layer *layer) {
+	wl_list_remove(&layer->link);
 	if (layer->viewport != NULL) {
 		wp_viewport_destroy(layer->viewport);
 	}
@@ -527,30 +525,15 @@ static void output_layer_handle_addon_destroy(struct wlr_addon *addon) {
 	free(layer);
 }
 
-static const struct wlr_addon_interface output_layer_addon_impl = {
-	.name = "wlr_wl_output_layer",
-	.destroy = output_layer_handle_addon_destroy,
-};
-
-static struct wlr_wl_output_layer *get_or_create_output_layer(
-		struct wlr_wl_output *output, struct wlr_output_layer *wlr_layer) {
+static struct wlr_wl_output_layer *output_layer_create(struct wlr_wl_output *output) {
 	assert(output->backend->subcompositor != NULL);
 
-	struct wlr_wl_output_layer *layer;
-	struct wlr_addon *addon = wlr_addon_find(&wlr_layer->addons, output,
-		&output_layer_addon_impl);
-	if (addon != NULL) {
-		layer = wl_container_of(addon, layer, addon);
-		return layer;
-	}
-
-	layer = calloc(1, sizeof(*layer));
+	struct wlr_wl_output_layer *layer = calloc(1, sizeof(*layer));
 	if (layer == NULL) {
 		return NULL;
 	}
 
-	wlr_addon_init(&layer->addon, &wlr_layer->addons, output,
-		&output_layer_addon_impl);
+	wl_list_insert(&output->layers, &layer->link);
 
 	layer->surface = wl_compositor_create_surface(output->backend->compositor);
 	layer->subsurface = wl_subcompositor_get_subsurface(
@@ -567,24 +550,6 @@ static struct wlr_wl_output_layer *get_or_create_output_layer(
 	}
 
 	return layer;
-}
-
-static bool has_layers_order_changed(struct wlr_wl_output *output,
-		struct wlr_output_layer_state *layers, size_t layers_len) {
-	// output_basic_check() ensures that layers_len equals the number of
-	// registered output layers
-	size_t i = 0;
-	struct wlr_output_layer *layer;
-	wl_list_for_each(layer, &output->wlr_output.layers, link) {
-		assert(i < layers_len);
-		const struct wlr_output_layer_state *layer_state = &layers[i];
-		if (layer_state->layer != layer) {
-			return true;
-		}
-		i++;
-	}
-	assert(i == layers_len);
-	return false;
 }
 
 static void output_layer_unmap(struct wlr_wl_output_layer *layer) {
@@ -669,14 +634,19 @@ static bool commit_layers(struct wlr_wl_output *output,
 		return true;
 	}
 
-	bool reordered = has_layers_order_changed(output, layers, layers_len);
+	struct wl_list *current_layer = output->layers.next;
 
-	struct wlr_wl_output_layer *prev_layer = NULL;
 	for (size_t i = 0; i < layers_len; i++) {
-		struct wlr_wl_output_layer *layer =
-			get_or_create_output_layer(output, layers[i].layer);
-		if (layer == NULL) {
-			return false;
+		struct wlr_wl_output_layer *layer;
+
+		if (current_layer == &output->layers) {
+			layer = output_layer_create(output);
+			if (layer == NULL) {
+				return false;
+			}
+		} else {
+			current_layer = current_layer->next;
+			layer = wl_container_of(current_layer, layer, link);
 		}
 
 		if (!layers[i].accepted) {
@@ -684,16 +654,19 @@ static bool commit_layers(struct wlr_wl_output *output,
 			continue;
 		}
 
-		if (prev_layer != NULL && reordered) {
-			wl_subsurface_place_above(layer->subsurface,
-				prev_layer->surface);
-		}
-
 		if (!output_layer_commit(output, layer, &layers[i])) {
 			return false;
 		}
 
 		prev_layer = layer;
+	}
+
+	// destroy unused subsurface
+	while (current_layer != &output->layers) {
+		struct wlr_wl_output_layer *layer =
+			wl_container_of(current_layer, layer, link);
+		current_layer = current_layer->next;
+		output_layer_destroy(layer);
 	}
 
 	return true;
@@ -935,6 +908,11 @@ static void output_destroy(struct wlr_output *wlr_output) {
 
 	wl_list_remove(&output->link);
 
+	struct wlr_wl_output_layer *layer, *tmp_layer;
+	wl_list_for_each_safe(layer, tmp_layer, &output->layers, link) {
+		output_layer_destroy(layer);
+	}
+
 	if (output->cursor.surface) {
 		wl_surface_destroy(output->cursor.surface);
 	}
@@ -1102,6 +1080,7 @@ static struct wlr_wl_output *output_create(struct wlr_wl_backend *backend,
 	output->surface = surface;
 	output->backend = backend;
 	wl_list_init(&output->presentation_feedbacks);
+	wl_list_init(&output->layers);
 
 	wl_proxy_set_tag((struct wl_proxy *)output->surface, &surface_tag);
 	wl_surface_set_user_data(output->surface, output);
