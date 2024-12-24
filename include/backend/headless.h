@@ -10,6 +10,7 @@ struct wlr_headless_backend {
 	struct wlr_backend backend;
 	struct wl_event_loop *event_loop;
 	struct wl_list outputs;
+	size_t last_output_num;
 	struct wl_listener event_loop_destroy;
 	bool started;
 };
@@ -26,5 +27,7 @@ struct wlr_headless_output {
 
 struct wlr_headless_backend *headless_backend_from_backend(
 	struct wlr_backend *wlr_backend);
+
+size_t wlr_headless_backend_get_output_num (struct wlr_headless_backend *headless);
 
 #endif

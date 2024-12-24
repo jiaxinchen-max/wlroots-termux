@@ -729,3 +729,8 @@ struct wl_display *wlr_wl_backend_get_remote_display(struct wlr_backend *backend
 	struct wlr_wl_backend *wl = get_wl_backend_from_backend(backend);
 	return wl->remote_display;
 }
+
+size_t wlr_wl_backend_get_output_num(struct wlr_wl_backend *wl)
+{
+  return ++wl->last_output_num;
+}

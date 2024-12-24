@@ -88,3 +88,8 @@ struct wlr_backend *wlr_headless_backend_create(struct wl_event_loop *loop) {
 bool wlr_backend_is_headless(struct wlr_backend *backend) {
 	return backend->impl == &backend_impl;
 }
+
+size_t wlr_headless_backend_get_output_num(struct wlr_headless_backend *headless)
+{
+  return ++headless->last_output_num;
+}

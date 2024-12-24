@@ -744,3 +744,8 @@ static void handle_x11_unknown_event(struct wlr_x11_backend *x11,
 	wlr_log(WLR_DEBUG, "Unhandled X11 event: %u", ev->response_type);
 #endif
 }
+
+size_t wlr_x11_backend_get_output_num (struct wlr_x11_backend *x11)
+{
+  return ++x11->last_output_num;
+}

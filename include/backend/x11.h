@@ -79,6 +79,7 @@ struct wlr_x11_backend {
 
 	size_t requested_outputs;
 	struct wl_list outputs; // wlr_x11_output.link
+	size_t last_output_num;
 
 	struct wlr_keyboard keyboard;
 
@@ -143,5 +144,7 @@ void handle_x11_configure_notify(struct wlr_x11_output *output,
 	xcb_configure_notify_event_t *event);
 void handle_x11_present_event(struct wlr_x11_backend *x11,
 	xcb_ge_generic_event_t *event);
+
+size_t wlr_x11_backend_get_output_num (struct wlr_x11_backend *x11);
 
 #endif

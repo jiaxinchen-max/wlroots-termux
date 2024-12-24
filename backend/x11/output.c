@@ -29,8 +29,6 @@ static const uint32_t SUPPORTED_OUTPUT_STATE =
 	WLR_OUTPUT_STATE_MODE |
 	WLR_OUTPUT_STATE_ADAPTIVE_SYNC_ENABLED;
 
-static size_t last_output_num = 0;
-
 static void parse_xcb_setup(struct wlr_output *output,
 		xcb_connection_t *xcb) {
 	const xcb_setup_t *xcb_setup = xcb_get_setup(xcb);
@@ -598,7 +596,7 @@ struct wlr_output *wlr_x11_output_create(struct wlr_backend *backend) {
 	wlr_output_init(wlr_output, &x11->backend, &output_impl, x11->event_loop, &state);
 	wlr_output_state_finish(&state);
 
-	size_t output_num = ++last_output_num;
+	size_t output_num = wlr_x11_backend_get_output_num (x11);
 
 	char name[64];
 	snprintf(name, sizeof(name), "X11-%zu", output_num);
