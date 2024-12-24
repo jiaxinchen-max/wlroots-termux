@@ -443,9 +443,13 @@ struct wlr_seat_client *wlr_seat_client_from_resource(
 }
 
 uint32_t wlr_seat_client_next_serial(struct wlr_seat_client *client) {
-	uint32_t serial = wl_display_next_serial(wl_client_get_display(client->client));
-	struct wlr_serial_ringset *set = &client->serials;
+	struct wl_display *display = wl_client_get_display(client->client);
+	uint32_t serial = wl_display_next_serial(display);
+	if (serial == 0) {
+		serial = wl_display_next_serial(display);
+	}
 
+	struct wlr_serial_ringset *set = &client->serials;
 	if (set->count == 0) {
 		set->data[0].min_incl = serial;
 		set->data[0].max_incl = serial;

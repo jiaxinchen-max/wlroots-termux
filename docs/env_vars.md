@@ -14,6 +14,8 @@ wlroots reads these environment variables
   hardware-accelerated renderers.
 * *WLR_RENDER_NO_EXPLICIT_SYNC*: set to 1 to disable explicit synchronization
   support in renderers.
+* *WLR_RENDERER_FORCE_SOFTWARE*: set to 1 to force software rendering for GLES2
+  and Vulkan
 * *WLR_EGL_NO_MODIFIERS*: set to 1 to disable format modifiers in EGL, this can
   be used to understand and work around driver bugs.
 

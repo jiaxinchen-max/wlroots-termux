@@ -29,7 +29,7 @@ sources:
 tasks:
   - wlroots: |
       cd wlroots
-      meson setup build --fatal-meson-warnings -Dauto_features=enabled
+      meson setup build --fatal-meson-warnings -Dauto_features=enabled -Dallocators=gbm
       ninja -C build
       sudo ninja -C build install
   - tinywl: |
