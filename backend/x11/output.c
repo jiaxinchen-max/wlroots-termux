@@ -667,7 +667,7 @@ struct wlr_output *wlr_x11_output_create(struct wlr_backend *backend) {
 	wl_list_insert(&x11->outputs, &output->link);
 
 	wlr_pointer_init(&output->pointer, &x11_pointer_impl, "x11-pointer");
-	output->pointer.output_name = strdup(wlr_output->name);
+	output->pointer.output = wlr_output;
 
 	wlr_touch_init(&output->touch, &x11_touch_impl, "x11-touch");
 	output->touch.output_name = strdup(wlr_output->name);

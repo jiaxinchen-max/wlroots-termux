@@ -23,7 +23,7 @@ struct wlr_pointer {
 
 	const struct wlr_pointer_impl *impl;
 
-	char *output_name;
+	struct wlr_output *output;
 
 	uint32_t buttons[WLR_POINTER_BUTTONS_CAP];
 	size_t button_count;

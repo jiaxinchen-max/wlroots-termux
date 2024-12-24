@@ -469,7 +469,7 @@ void create_pointer(struct wlr_wl_seat *seat, struct wlr_wl_output *output) {
 	snprintf(name, sizeof(name), "wayland-pointer-%s", seat->name);
 	wlr_pointer_init(&pointer->wlr_pointer, &wl_pointer_impl, name);
 
-	pointer->wlr_pointer.output_name = strdup(output->wlr_output.name);
+	pointer->wlr_pointer.output = &output->wlr_output;
 
 	pointer->seat = seat;
 	pointer->output = output;

@@ -50,8 +50,6 @@ void wlr_pointer_finish(struct wlr_pointer *pointer) {
 	}
 
 	wlr_input_device_finish(&pointer->base);
-
-	free(pointer->output_name);
 }
 
 void wlr_pointer_notify_button(struct wlr_pointer *pointer,

@@ -286,6 +286,9 @@ static void server_new_pointer(struct tinywl_server *server,
 	 * opportunity to do libinput configuration on the device to set
 	 * acceleration, etc. */
 	wlr_cursor_attach_input_device(server->cursor, device);
+	
+	struct wlr_pointer *wlr_pointer = wlr_pointer_from_input_device(device);
+	wlr_cursor_map_input_to_output(server->cursor, device, wlr_pointer->output);
 }
 
 static void server_new_input(struct wl_listener *listener, void *data) {
