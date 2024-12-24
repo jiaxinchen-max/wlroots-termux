@@ -86,6 +86,47 @@ void parse_edid(struct wlr_drm_connector *conn, size_t len, const uint8_t *data)
 	di_info_destroy(info);
 }
 
+void parse_tile(struct wlr_drm_connector *conn, size_t len, const uint8_t *data) {
+	struct wlr_output_group_tile_info *tile_info = &conn->tile_info;
+	memset(tile_info, 0, sizeof(*tile_info));
+	if (len == 0)
+		return;
+
+	// Reference:
+	// - include/linux/drm/drm_connector.h tile_blob_ptr
+	// - drivers/gpu/drm/drm_edid.c drm_parse_tiled_block()
+	//
+	// Note: group_id is always > 0
+	int ret = sscanf((char*)data, "%d:%d:%d:%d:%d:%d:%d:%d",
+		&tile_info->group_id,
+		&tile_info->is_single_monitor,
+		&tile_info->num_h,
+		&tile_info->num_v,
+		&tile_info->h_loc,
+		&tile_info->v_loc,
+		&tile_info->h_size,
+		&tile_info->v_size);
+	if(ret != 8) {
+		wlr_log(WLR_ERROR, "Unable to understand tile information for "
+			"connector %s", conn->name);
+		return;
+	}
+
+	wlr_log(WLR_INFO, "Connector '%s' TILE information: "
+		"group ID %d, single monitor %d, total %d horizontal tiles, "
+		"total %d vertical tiles, horizontal tile %d, vertical tile "
+		"%d, width %d, height %d",
+		conn->name,
+		tile_info->group_id,
+		tile_info->is_single_monitor,
+		tile_info->num_h,
+		tile_info->num_v,
+		tile_info->h_loc,
+		tile_info->v_loc,
+		tile_info->h_size,
+		tile_info->v_size);
+}
+
 const char *drm_connector_status_str(drmModeConnection status) {
 	switch (status) {
 	case DRM_MODE_CONNECTED:

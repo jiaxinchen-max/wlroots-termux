@@ -10,6 +10,7 @@
 #include <wlr/backend/session.h>
 #include <wlr/render/drm_format_set.h>
 #include <wlr/types/wlr_output_layer.h>
+#include <wlr/types/wlr_output_group.h>
 #include <xf86drmMode.h>
 #include "backend/drm/iface.h"
 #include "backend/drm/properties.h"
@@ -213,6 +214,8 @@ struct wlr_drm_connector {
 	struct wlr_drm_page_flip *pending_page_flip;
 
 	int32_t refresh;
+
+	struct wlr_output_group_tile_info tile_info;
 };
 
 struct wlr_drm_backend *get_drm_backend_from_backend(

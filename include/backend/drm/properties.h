@@ -22,6 +22,7 @@ struct wlr_drm_connector_props {
 	uint32_t panel_orientation; // not guaranteed to exist
 	uint32_t content_type; // not guaranteed to exist
 	uint32_t max_bpc; // not guaranteed to exist
+	uint32_t tile; // not guaranteed to exist
 
 	// atomic-modesetting only
 

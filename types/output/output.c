@@ -221,7 +221,7 @@ void wlr_output_set_description(struct wlr_output *output, const char *desc) {
 	wl_signal_emit_mutable(&output->events.description, output);
 }
 
-static void output_apply_state(struct wlr_output *output,
+void output_apply_state(struct wlr_output *output,
 		const struct wlr_output_state *state) {
 	if (state->committed & WLR_OUTPUT_STATE_RENDER_FORMAT) {
 		output->render_format = state->render_format;

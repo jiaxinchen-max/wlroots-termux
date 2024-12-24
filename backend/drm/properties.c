@@ -24,6 +24,7 @@ static const struct prop_info connector_info[] = {
 	{ "DPMS", INDEX(dpms) },
 	{ "EDID", INDEX(edid) },
 	{ "PATH", INDEX(path) },
+	{ "TILE", INDEX(tile) },
 	{ "content type", INDEX(content_type) },
 	{ "link-status", INDEX(link_status) },
 	{ "max bpc", INDEX(max_bpc) },

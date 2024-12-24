@@ -108,6 +108,9 @@ struct wlr_output_impl {
 void wlr_output_init(struct wlr_output *output, struct wlr_backend *backend,
 	const struct wlr_output_impl *impl, struct wl_event_loop *event_loop,
 	const struct wlr_output_state *state);
+
+void output_apply_state(struct wlr_output *output,
+		const struct wlr_output_state *state);
 /**
  * Notify compositors that they need to submit a new frame in order to apply
  * output changes.
