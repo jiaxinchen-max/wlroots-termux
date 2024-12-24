@@ -25,7 +25,7 @@
     THIS SOFTWARE.
   </copyright>
 
-  <interface name="zwlr_foreign_toplevel_manager_v1" version="3">
+  <interface name="zwlr_foreign_toplevel_manager_v1" version="4">
     <description summary="list and control opened apps">
       The purpose of this protocol is to enable the creation of taskbars
       and docks by providing them with a list of opened applications and
@@ -68,7 +68,7 @@
     </event>
   </interface>
 
-  <interface name="zwlr_foreign_toplevel_handle_v1" version="3">
+  <interface name="zwlr_foreign_toplevel_handle_v1" version="4">
     <description summary="an opened toplevel">
       A zwlr_foreign_toplevel_handle_v1 object represents an opened toplevel
       window. Each app may have multiple opened toplevels.
@@ -265,6 +265,28 @@
         No event is emitted when the parent handle is destroyed by the client.
       </description>
       <arg name="parent" type="object" interface="zwlr_foreign_toplevel_handle_v1" allow-null="true"/>
+    </event>
+
+    <!-- Version 4 additions -->
+
+    <enum name="responsiveness" since="4">
+      <description summary="types of responsiveness states">
+        The different responsiveness states that a toplevel can have. If the client didn't receive
+        any event from the compositor it should assume the client is responsive.
+      </description>
+
+      <entry name="responsive"   value="0" summary="the compositor deems the toplevel reponsive"/>
+      <entry name="unresponsive" value="1" summary="the compositor deems the toplevel is unresponsive"/>
+    </enum>
+
+    <event name="responsiveness" since="4">
+      <description summary="responsiveness">
+        This event is emitted when the compositor detects a change in the toplevels responsiveness.
+        An unresponsive toplevel usually doesn't respond to ping requests send by the compositor
+        while a responsive one does but a compositor might use more elaborate means to detect if a
+        toplevel is still usable by the user.
+      </description>
+      <arg name="responsive" type="uint" enum="responsiveness"/>
     </event>
   </interface>
 </protocol>

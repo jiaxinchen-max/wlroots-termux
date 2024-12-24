@@ -36,6 +36,11 @@ enum wlr_foreign_toplevel_handle_v1_state {
 	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN = (1 << 3),
 };
 
+enum wlr_foreign_toplevel_handle_v1_responsiveness {
+	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_RESPONSIVENESS_RESPONSIVE = (0 << 0),
+	WLR_FOREIGN_TOPLEVEL_HANDLE_V1_RESPONSIVENESS_UNRESPONSIVE = (1 << 0),
+};
+
 struct wlr_foreign_toplevel_handle_v1_output {
 	struct wl_list link; // wlr_foreign_toplevel_handle_v1.outputs
 	struct wlr_output *output;
@@ -57,6 +62,7 @@ struct wlr_foreign_toplevel_handle_v1 {
 	char *app_id;
 	struct wlr_foreign_toplevel_handle_v1 *parent;
 	struct wl_list outputs; // wlr_foreign_toplevel_v1_output.link
+	uint32_t responsiveness; // enum wlr_foreign_toplevel_v1_responsiveness
 	uint32_t state; // enum wlr_foreign_toplevel_v1_state
 
 	struct {
@@ -151,5 +157,7 @@ void wlr_foreign_toplevel_handle_v1_set_parent(
 	struct wlr_foreign_toplevel_handle_v1 *toplevel,
 	struct wlr_foreign_toplevel_handle_v1 *parent);
 
+void wlr_foreign_toplevel_handle_v1_set_responsive(
+	struct wlr_foreign_toplevel_handle_v1 *toplevel, bool responsive);
 
 #endif

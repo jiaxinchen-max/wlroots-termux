@@ -12,6 +12,7 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_output.h>
@@ -67,6 +68,8 @@ struct tinywl_server {
 	struct wlr_output_layout *output_layout;
 	struct wl_list outputs;
 	struct wl_listener new_output;
+
+	struct wlr_foreign_toplevel_manager_v1 *foreign_toplevel_manager;
 };
 
 struct tinywl_output {
@@ -82,15 +85,20 @@ struct tinywl_toplevel {
 	struct wl_list link;
 	struct tinywl_server *server;
 	struct wlr_xdg_toplevel *xdg_toplevel;
+	struct wlr_foreign_toplevel_handle_v1 *foreign_toplevel;
 	struct wlr_scene_tree *scene_tree;
 	struct wl_listener map;
 	struct wl_listener unmap;
 	struct wl_listener commit;
+	struct wl_listener set_app_id;
+	struct wl_listener set_title;
+	struct wl_listener set_parent;
 	struct wl_listener destroy;
 	struct wl_listener request_move;
 	struct wl_listener request_resize;
 	struct wl_listener request_maximize;
 	struct wl_listener request_fullscreen;
+	struct wl_listener ping_timeout;
 };
 
 struct tinywl_popup {
@@ -150,6 +158,8 @@ static void focus_toplevel(struct tinywl_toplevel *toplevel) {
 		wlr_seat_keyboard_notify_enter(seat, surface,
 			keyboard->keycodes, keyboard->num_keycodes, &keyboard->modifiers);
 	}
+	wlr_log(WLR_DEBUG, "Pinging toplevel %s", toplevel->xdg_toplevel->title);
+	wlr_xdg_surface_ping(toplevel->xdg_toplevel->base);
 }
 
 static void keyboard_handle_modifiers(
@@ -691,18 +701,54 @@ static void xdg_toplevel_commit(struct wl_listener *listener, void *data) {
 	}
 }
 
+static void xdg_toplevel_set_app_id(struct wl_listener *listener, void *data) {
+	/* Called when the toplevel wants to set its app ID. */
+	struct tinywl_toplevel *toplevel = wl_container_of(listener, toplevel, set_app_id);
+	const char *app_id = toplevel->xdg_toplevel->app_id;
+	wlr_foreign_toplevel_handle_v1_set_app_id(toplevel->foreign_toplevel, app_id);
+}
+
+static void xdg_toplevel_set_title(struct wl_listener *listener, void *data) {
+	/* Called when the toplevel wants to set its title. */
+	struct tinywl_toplevel *toplevel = wl_container_of(listener, toplevel, set_title);
+	const char *title = toplevel->xdg_toplevel->title;
+	wlr_foreign_toplevel_handle_v1_set_title(toplevel->foreign_toplevel, title);
+}
+
+static void xdg_toplevel_set_parent(struct wl_listener *listener, void *data) {
+	/* Called when the toplevel wants to set its parent. */
+	struct tinywl_toplevel *toplevel = wl_container_of(listener, toplevel, set_parent);
+
+	/* Iterate through list of toplevels and find the tinywl_toplevel whose xdg_toplevel is the
+	 * current toplevel's parent. */
+	struct wlr_foreign_toplevel_handle_v1 *foreign_parent_toplevel = NULL;
+	struct tinywl_toplevel *parent_toplevel;
+	wl_list_for_each(parent_toplevel, &toplevel->server->toplevels, link) {
+		if (parent_toplevel->xdg_toplevel == toplevel->xdg_toplevel->parent) {
+			foreign_parent_toplevel = parent_toplevel->foreign_toplevel;
+		}
+	}
+	wlr_foreign_toplevel_handle_v1_set_parent(toplevel->foreign_toplevel, foreign_parent_toplevel);
+}
+
 static void xdg_toplevel_destroy(struct wl_listener *listener, void *data) {
 	/* Called when the xdg_toplevel is destroyed. */
 	struct tinywl_toplevel *toplevel = wl_container_of(listener, toplevel, destroy);
 
+	wlr_foreign_toplevel_handle_v1_destroy(toplevel->foreign_toplevel);
+
 	wl_list_remove(&toplevel->map.link);
 	wl_list_remove(&toplevel->unmap.link);
 	wl_list_remove(&toplevel->commit.link);
+	wl_list_remove(&toplevel->set_app_id.link);
+	wl_list_remove(&toplevel->set_title.link);
+	wl_list_remove(&toplevel->set_parent.link);
 	wl_list_remove(&toplevel->destroy.link);
 	wl_list_remove(&toplevel->request_move.link);
 	wl_list_remove(&toplevel->request_resize.link);
 	wl_list_remove(&toplevel->request_maximize.link);
 	wl_list_remove(&toplevel->request_fullscreen.link);
+	wl_list_remove(&toplevel->ping_timeout.link);
 
 	free(toplevel);
 }
@@ -787,6 +833,14 @@ static void xdg_toplevel_request_fullscreen(
 	}
 }
 
+static void xdg_toplevel_ping_timeout(
+		struct wl_listener *listener, void *data) {
+	struct tinywl_toplevel *toplevel =
+		wl_container_of(listener, toplevel, ping_timeout);
+	wlr_log(WLR_DEBUG, "Ping timeout for toplevel %s", toplevel->xdg_toplevel->title);
+	wlr_foreign_toplevel_handle_v1_set_responsive(toplevel->foreign_toplevel, false);
+}
+
 static void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
 	/* This event is raised when a client creates a new toplevel (application window). */
 	struct tinywl_server *server = wl_container_of(listener, server, new_xdg_toplevel);
@@ -801,6 +855,11 @@ static void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
 	toplevel->scene_tree->node.data = toplevel;
 	xdg_toplevel->base->data = toplevel->scene_tree;
 
+	/* Setup foreign_toplevel_handle */
+	struct wlr_foreign_toplevel_handle_v1 *foreign_toplevel =
+		wlr_foreign_toplevel_handle_v1_create(server->foreign_toplevel_manager);
+	toplevel->foreign_toplevel = foreign_toplevel;
+
 	/* Listen to the various events it can emit */
 	toplevel->map.notify = xdg_toplevel_map;
 	wl_signal_add(&xdg_toplevel->base->surface->events.map, &toplevel->map);
@@ -808,6 +867,12 @@ static void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
 	wl_signal_add(&xdg_toplevel->base->surface->events.unmap, &toplevel->unmap);
 	toplevel->commit.notify = xdg_toplevel_commit;
 	wl_signal_add(&xdg_toplevel->base->surface->events.commit, &toplevel->commit);
+	toplevel->set_app_id.notify = xdg_toplevel_set_app_id;
+	wl_signal_add(&xdg_toplevel->events.set_app_id, &toplevel->set_app_id);
+	toplevel->set_title.notify = xdg_toplevel_set_title;
+	wl_signal_add(&xdg_toplevel->events.set_title, &toplevel->set_title);
+	toplevel->set_parent.notify = xdg_toplevel_set_parent;
+	wl_signal_add(&xdg_toplevel->events.set_parent, &toplevel->set_parent);
 
 	toplevel->destroy.notify = xdg_toplevel_destroy;
 	wl_signal_add(&xdg_toplevel->events.destroy, &toplevel->destroy);
@@ -821,6 +886,10 @@ static void server_new_xdg_toplevel(struct wl_listener *listener, void *data) {
 	wl_signal_add(&xdg_toplevel->events.request_maximize, &toplevel->request_maximize);
 	toplevel->request_fullscreen.notify = xdg_toplevel_request_fullscreen;
 	wl_signal_add(&xdg_toplevel->events.request_fullscreen, &toplevel->request_fullscreen);
+
+	/* Check for responsiveness */
+	toplevel->ping_timeout.notify = xdg_toplevel_ping_timeout;
+	wl_signal_add(&xdg_toplevel->base->events.ping_timeout, &toplevel->ping_timeout);
 }
 
 static void xdg_popup_commit(struct wl_listener *listener, void *data) {
@@ -1021,6 +1090,14 @@ int main(int argc, char *argv[]) {
 	server.request_set_selection.notify = seat_request_set_selection;
 	wl_signal_add(&server.seat->events.request_set_selection,
 			&server.request_set_selection);
+
+	/* Setup foreign_toplevel_management. This protocol allows creation of taskbars, docks etc.
+	 * which can manage the windows (like maximize, minimize etc.). The current code of tinywl does
+	 * not process these requests. However, this protocol has been added to demonstrate the usage of
+	 * responsiveness event. This event allows tinywl to inform foreign_toplevel_management clients
+	 * of unresponsive apps.
+	 */
+	server.foreign_toplevel_manager = wlr_foreign_toplevel_manager_v1_create(server.wl_display);
 
 	/* Add a Unix socket to the Wayland display. */
 	const char *socket = wl_display_add_socket_auto(server.wl_display);
