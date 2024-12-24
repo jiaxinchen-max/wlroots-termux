@@ -37,6 +37,8 @@ struct wlr_texture_read_pixels_options {
 	uint32_t dst_x, dst_y;
 	/** Source box of the texture to read from. If empty, the full texture is assumed. */
 	const struct wlr_box src_box;
+	/** Region of interest within source box. If NULL, the full region is assumed to be of interest. */
+	struct pixman_region32 *roi;
 };
 
 bool wlr_texture_read_pixels(struct wlr_texture *texture,

@@ -215,7 +215,19 @@ static bool gles2_texture_read_pixels(struct wlr_texture *wlr_texture,
 		// Under these particular conditions, we can read the pixels with only
 		// one glReadPixels call
 
-		glReadPixels(src.x, src.y, src.width, src.height, fmt->gl_format, fmt->gl_type, p);
+		int y_offset = 0;
+		int src_height = src.height;
+		int data_offset = 0;
+		if (options->roi) {
+			struct pixman_box32 *ext =
+				pixman_region32_extents(options->roi);
+			y_offset = ext->y1;
+			src_height = ext->y2 - ext->y1;
+			data_offset = y_offset * options->stride;
+		}
+
+		glReadPixels(src.x, src.y + y_offset, src.width, src_height,
+				fmt->gl_format, fmt->gl_type, p + data_offset);
 	} else {
 		// Unfortunately GLES2 doesn't support GL_PACK_ROW_LENGTH, so we have to read
 		// the lines out row by row

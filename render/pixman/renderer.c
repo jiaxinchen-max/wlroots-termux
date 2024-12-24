@@ -107,9 +107,12 @@ static bool texture_read_pixels(struct wlr_texture *wlr_texture,
 	pixman_image_t *dst = pixman_image_create_bits_no_clear(fmt,
 			src.width, src.height, p, options->stride);
 
+	if (options->roi) {
+		pixman_image_set_clip_region32(dst, options->roi);
+	}
+
 	pixman_image_composite32(PIXMAN_OP_SRC, texture->image, NULL, dst,
 			src.x, src.y, 0, 0, 0, 0, src.width, src.height);
-
 	pixman_image_unref(dst);
 
 	return true;
