@@ -10,6 +10,7 @@
 #define WLR_TYPES_WLR_INPUT_DEVICE_H
 
 #include <wayland-server-core.h>
+#include <wlr/util/addon.h>
 
 enum wlr_button_state {
 	WLR_BUTTON_RELEASED,
@@ -44,6 +45,8 @@ struct wlr_input_device {
 	struct {
 		struct wl_signal destroy;
 	} events;
+
+	struct wlr_addon_set addons;
 
 	void *data;
 };
