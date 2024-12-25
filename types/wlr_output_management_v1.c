@@ -6,7 +6,7 @@
 #include <wlr/util/log.h>
 #include "wlr-output-management-unstable-v1-protocol.h"
 
-#define OUTPUT_MANAGER_VERSION 4
+#define OUTPUT_MANAGER_VERSION 5
 
 enum {
 	HEAD_STATE_ENABLED = 1 << 0,
@@ -15,11 +15,12 @@ enum {
 	HEAD_STATE_TRANSFORM = 1 << 3,
 	HEAD_STATE_SCALE = 1 << 4,
 	HEAD_STATE_ADAPTIVE_SYNC = 1 << 5,
+	HEAD_STATE_VIEWPORT = 1 << 6,
 };
 
 static const uint32_t HEAD_STATE_ALL = HEAD_STATE_ENABLED | HEAD_STATE_MODE |
 	HEAD_STATE_POSITION | HEAD_STATE_TRANSFORM | HEAD_STATE_SCALE |
-	HEAD_STATE_ADAPTIVE_SYNC;
+	HEAD_STATE_ADAPTIVE_SYNC | HEAD_STATE_VIEWPORT;
 
 static const struct zwlr_output_head_v1_interface head_impl;
 
@@ -162,6 +163,8 @@ struct wlr_output_configuration_head_v1 *
 	config_head->state.scale = output->scale;
 	config_head->state.adaptive_sync_enabled =
 		output->adaptive_sync_status == WLR_OUTPUT_ADAPTIVE_SYNC_ENABLED;
+	config_head->state.width = output->width * output->scale;
+	config_head->state.height = output->height * output->scale;
 	return config_head;
 }
 
@@ -307,6 +310,26 @@ static void config_head_handle_set_adaptive_sync(struct wl_client *client,
 	}
 }
 
+static void config_head_handle_set_viewport(struct wl_client *client,
+		struct wl_resource *config_head_resource,
+		int32_t width, int32_t height) {
+	struct wlr_output_configuration_head_v1 *config_head =
+		config_head_from_resource(config_head_resource);
+	if (config_head == NULL) {
+		return;
+	}
+
+	if (width <= 0 || height <= 0) {
+		wl_resource_post_error(config_head_resource,
+			ZWLR_OUTPUT_CONFIGURATION_HEAD_V1_ERROR_INVALID_VIEWPORT,
+			"invalid viewport");
+		return;
+	}
+
+	config_head->state.width = width;
+	config_head->state.height = height;
+}
+
 static const struct zwlr_output_configuration_head_v1_interface config_head_impl = {
 	.set_mode = config_head_handle_set_mode,
 	.set_custom_mode = config_head_handle_set_custom_mode,
@@ -314,6 +337,7 @@ static const struct zwlr_output_configuration_head_v1_interface config_head_impl
 	.set_transform = config_head_handle_set_transform,
 	.set_scale = config_head_handle_set_scale,
 	.set_adaptive_sync = config_head_handle_set_adaptive_sync,
+	.set_viewport = config_head_handle_set_viewport,
 };
 
 static void config_head_handle_resource_destroy(struct wl_resource *resource) {
@@ -746,6 +770,7 @@ static struct wl_resource *head_send_mode(struct wlr_output_head_v1 *head,
 static void head_send_state(struct wlr_output_head_v1 *head,
 		struct wl_resource *head_resource, uint32_t state) {
 	struct wl_client *client = wl_resource_get_client(head_resource);
+	uint32_t version = wl_resource_get_version(head_resource);
 
 	if (state & HEAD_STATE_ENABLED) {
 		zwlr_output_head_v1_send_enabled(head_resource, head->state.enabled);
@@ -799,8 +824,7 @@ static void head_send_state(struct wlr_output_head_v1 *head,
 	}
 
 	if ((state & HEAD_STATE_ADAPTIVE_SYNC) &&
-			wl_resource_get_version(head_resource) >=
-			ZWLR_OUTPUT_HEAD_V1_ADAPTIVE_SYNC_SINCE_VERSION) {
+			version >= ZWLR_OUTPUT_HEAD_V1_ADAPTIVE_SYNC_SINCE_VERSION) {
 		if (head->state.adaptive_sync_enabled) {
 			zwlr_output_head_v1_send_adaptive_sync(head_resource,
 				ZWLR_OUTPUT_HEAD_V1_ADAPTIVE_SYNC_STATE_ENABLED);
@@ -808,6 +832,12 @@ static void head_send_state(struct wlr_output_head_v1 *head,
 			zwlr_output_head_v1_send_adaptive_sync(head_resource,
 				ZWLR_OUTPUT_HEAD_V1_ADAPTIVE_SYNC_STATE_DISABLED);
 		}
+	}
+
+	if ((state & HEAD_STATE_VIEWPORT) &&
+			version >= ZWLR_OUTPUT_HEAD_V1_VIEWPORT_SINCE_VERSION) {
+		zwlr_output_head_v1_send_viewport(head_resource,
+			head->state.width, head->state.height);
 	}
 }
 
@@ -904,6 +934,9 @@ static bool manager_update_head(struct wlr_output_manager_v1 *manager,
 	}
 	if (current->adaptive_sync_enabled != next->adaptive_sync_enabled) {
 		state |= HEAD_STATE_ADAPTIVE_SYNC;
+	}
+	if (current->width != next->width || current->height != next->height) {
+		state |= HEAD_STATE_VIEWPORT;
 	}
 
 	// If  a mode was added to wlr_output.modes we need to add the new mode
