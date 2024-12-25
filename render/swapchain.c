@@ -74,7 +74,7 @@ static struct wlr_buffer *slot_acquire(struct wlr_swapchain *swapchain,
 	slot->release.notify = slot_handle_release;
 	wl_signal_add(&slot->buffer->events.release, &slot->release);
 
-	return wlr_buffer_lock(slot->buffer);
+	return wlr_buffer_acquire(slot->buffer);
 }
 
 struct wlr_buffer *wlr_swapchain_acquire(struct wlr_swapchain *swapchain) {

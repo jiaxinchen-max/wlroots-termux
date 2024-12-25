@@ -57,5 +57,12 @@ struct wlr_buffer *wlr_buffer_try_from_resource(struct wl_resource *resource) {
 		return NULL;
 	}
 
-	return wlr_buffer_lock(buffer);
+	// If the buffer is released, we want to acquire it. If the buffer is
+	// already acquired (e.g. because it has been attached to another surface),
+	// we want to lock it.
+	if (buffer->n_locks > 0) {
+		return wlr_buffer_lock(buffer);
+	} else {
+		return wlr_buffer_acquire(buffer);
+	}
 }

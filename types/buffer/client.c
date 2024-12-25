@@ -89,7 +89,7 @@ struct wlr_client_buffer *wlr_client_buffer_create(struct wlr_buffer *buffer,
 	client_buffer->renderer_destroy.notify = client_buffer_handle_renderer_destroy;
 
 	// Ensure the buffer will be released before being destroyed
-	wlr_buffer_lock(&client_buffer->base);
+	wlr_buffer_acquire(&client_buffer->base);
 	wlr_buffer_drop(&client_buffer->base);
 
 	return client_buffer;

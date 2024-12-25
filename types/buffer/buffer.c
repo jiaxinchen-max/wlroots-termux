@@ -45,7 +45,14 @@ void wlr_buffer_drop(struct wlr_buffer *buffer) {
 	buffer_consider_destroy(buffer);
 }
 
+struct wlr_buffer *wlr_buffer_acquire(struct wlr_buffer *buffer) {
+	assert(buffer->n_locks == 0);
+	buffer->n_locks++;
+	return buffer;
+}
+
 struct wlr_buffer *wlr_buffer_lock(struct wlr_buffer *buffer) {
+	assert(buffer->n_locks > 0);
 	buffer->n_locks++;
 	return buffer;
 }

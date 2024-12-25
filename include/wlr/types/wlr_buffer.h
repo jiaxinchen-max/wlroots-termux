@@ -44,9 +44,11 @@ enum wlr_buffer_cap {
  * A buffer containing pixel data.
  *
  * A buffer has a single producer (the party who created the buffer) and
- * multiple consumers (parties reading the buffer). When all consumers are done
- * with the buffer, it gets released and can be re-used by the producer. When
- * the producer and all consumers are done with the buffer, it gets destroyed.
+ * multiple consumers (parties reading the buffer). Initially, a buffer is
+ * released. When the consumer passes the buffer to a consumer, the buffer is
+ * acquired. When all consumers are done with the buffer, it gets released and
+ * can be re-used by the producer. When the producer and all consumers are done
+ * with the buffer, it gets destroyed.
  */
 struct wlr_buffer {
 	const struct wlr_buffer_impl *impl;
@@ -71,9 +73,19 @@ struct wlr_buffer {
  */
 void wlr_buffer_drop(struct wlr_buffer *buffer);
 /**
+ * Acquire the buffer. This function should be called by producers when they
+ * pass a released buffer to a consumer. The consumer is responsible for
+ * calling wlr_buffer_unlock() once they are done with the buffer.
+ *
+ * This function aborts if the buffer has already been acquired.
+ */
+struct wlr_buffer *wlr_buffer_acquire(struct wlr_buffer *buffer);
+/**
  * Lock the buffer. This function should be called by consumers to make
  * sure the buffer can be safely read from. Once the consumer is done with the
  * buffer, they should call wlr_buffer_unlock().
+ *
+ * This function aborts if the buffer hasn't been acquired.
  */
 struct wlr_buffer *wlr_buffer_lock(struct wlr_buffer *buffer);
 /**
