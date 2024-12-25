@@ -57,7 +57,7 @@ wlroots reads these environment variables
 
 * *WLR_SCENE_DEBUG_DAMAGE*: specifies debug options for screen damage related
   tasks for compositors that use scenes (available options: none, rerender,
-  highlight)
+  rerender_node, highlight)
 * *WLR_SCENE_DISABLE_DIRECT_SCANOUT*: disables direct scan-out for debugging.
 * *WLR_SCENE_DISABLE_VISIBILITY*: If set to 1, the visibility of all scene nodes
   will be considered to be the full node. Intelligent visibility canculations will

@@ -186,6 +186,7 @@ struct wlr_scene *wlr_scene_create(void) {
 	const char *debug_damage_options[] = {
 		"none",
 		"rerender",
+		"rerender_node",
 		"highlight",
 		NULL
 	};
@@ -918,14 +919,22 @@ void wlr_scene_buffer_set_buffer_with_options(struct wlr_scene_buffer *scene_buf
 	}
 
 	pixman_region32_t trans_damage;
-	pixman_region32_init(&trans_damage);
-	wlr_region_transform(&trans_damage, damage,
-		scene_buffer->transform, buffer->width, buffer->height);
+
+	struct wlr_scene *scene = scene_node_get_root(&scene_buffer->node);
+	if (scene->debug_damage_option == WLR_SCENE_DEBUG_DAMAGE_RERENDER_NODE) {
+		pixman_region32_init_rect(&trans_damage, 0, 0, buffer->width, buffer->height);
+		wlr_region_transform(&trans_damage, &trans_damage,
+			scene_buffer->transform, buffer->width, buffer->height);
+	} else {
+		pixman_region32_init(&trans_damage);
+		wlr_region_transform(&trans_damage, damage,
+			scene_buffer->transform, buffer->width, buffer->height);
+	}
+
 	pixman_region32_intersect_rect(&trans_damage, &trans_damage,
 		box.x, box.y, box.width, box.height);
 	pixman_region32_translate(&trans_damage, -box.x, -box.y);
 
-	struct wlr_scene *scene = scene_node_get_root(&scene_buffer->node);
 	struct wlr_scene_output *scene_output;
 	wl_list_for_each(scene_output, &scene->outputs, link) {
 		float output_scale = scene_output->output->scale;
