@@ -46,6 +46,9 @@ struct wlr_x11_output {
 
 	pixman_region32_t exposed;
 
+	// Last submitted buffer, to be re-submitted on expose events
+	struct wlr_buffer *current_buffer;
+
 	uint64_t last_msc;
 
 	struct {
@@ -143,5 +146,7 @@ void handle_x11_configure_notify(struct wlr_x11_output *output,
 	xcb_configure_notify_event_t *event);
 void handle_x11_present_event(struct wlr_x11_backend *x11,
 	xcb_ge_generic_event_t *event);
+void handle_x11_expose_event(struct wlr_x11_output *output,
+	xcb_expose_event_t *event);
 
 #endif

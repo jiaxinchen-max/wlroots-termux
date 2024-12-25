@@ -98,6 +98,7 @@ static void output_destroy(struct wlr_output *wlr_output) {
 
 	wlr_pointer_finish(&output->pointer);
 	wlr_touch_finish(&output->touch);
+	wlr_buffer_unlock(output->current_buffer);
 
 	struct wlr_x11_buffer *buffer, *buffer_tmp;
 	wl_list_for_each_safe(buffer, buffer_tmp, &output->buffers, link) {
@@ -332,6 +333,34 @@ static struct wlr_x11_buffer *get_or_create_x11_buffer(
 	return create_x11_buffer(output, wlr_buffer);
 }
 
+static xcb_xfixes_region_t create_region(struct wlr_x11_backend *x11,
+		const pixman_region32_t *region) {
+	int rects_len = 0;
+	const pixman_box32_t *rects = pixman_region32_rectangles(region, &rects_len);
+
+	xcb_rectangle_t *xcb_rects = calloc(rects_len, sizeof(xcb_rectangle_t));
+	if (!xcb_rects) {
+		return XCB_NONE;
+	}
+
+	for (int i = 0; i < rects_len; i++) {
+		const pixman_box32_t *box = &rects[i];
+		xcb_rects[i] = (struct xcb_rectangle_t){
+			.x = box->x1,
+			.y = box->y1,
+			.width = box->x2 - box->x1,
+			.height = box->y2 - box->y1,
+		};
+	}
+
+	xcb_xfixes_region_t x11_region = xcb_generate_id(x11->xcb);
+	xcb_xfixes_create_region(x11->xcb, x11_region, rects_len, xcb_rects);
+
+	free(xcb_rects);
+
+	return x11_region;
+}
+
 static bool output_commit_buffer(struct wlr_x11_output *output,
 		const struct wlr_output_state *state) {
 	struct wlr_x11_backend *x11 = output->x11;
@@ -346,29 +375,7 @@ static bool output_commit_buffer(struct wlr_x11_output *output,
 	xcb_xfixes_region_t region = XCB_NONE;
 	if (state->committed & WLR_OUTPUT_STATE_DAMAGE) {
 		pixman_region32_union(&output->exposed, &output->exposed, &state->damage);
-
-		int rects_len = 0;
-		const pixman_box32_t *rects = pixman_region32_rectangles(&output->exposed, &rects_len);
-
-		xcb_rectangle_t *xcb_rects = calloc(rects_len, sizeof(xcb_rectangle_t));
-		if (!xcb_rects) {
-			goto error;
-		}
-
-		for (int i = 0; i < rects_len; i++) {
-			const pixman_box32_t *box = &rects[i];
-			xcb_rects[i] = (struct xcb_rectangle_t){
-				.x = box->x1,
-				.y = box->y1,
-				.width = box->x2 - box->x1,
-				.height = box->y2 - box->y1,
-			};
-		}
-
-		region = xcb_generate_id(x11->xcb);
-		xcb_xfixes_create_region(x11->xcb, region, rects_len, xcb_rects);
-
-		free(xcb_rects);
+		region = create_region(x11, &output->exposed);
 	}
 
 	pixman_region32_clear(&output->exposed);
@@ -383,6 +390,9 @@ static bool output_commit_buffer(struct wlr_x11_output *output,
 	if (region != XCB_NONE) {
 		xcb_xfixes_destroy_region(x11->xcb, region);
 	}
+
+	wlr_buffer_unlock(output->current_buffer);
+	output->current_buffer = wlr_buffer_lock(buffer);
 
 	return true;
 
@@ -766,6 +776,12 @@ void handle_x11_present_event(struct wlr_x11_backend *x11,
 			return;
 		}
 
+		if (output->last_msc == complete_notify->msc && complete_notify->serial == 0) {
+			// This is a present complete event triggered by a synthetic
+			// present request sent from handle_x11_expose_event()
+			return;
+		}
+
 		output->last_msc = complete_notify->msc;
 
 		uint32_t flags = 0;
@@ -788,5 +804,41 @@ void handle_x11_present_event(struct wlr_x11_backend *x11,
 		break;
 	default:
 		wlr_log(WLR_DEBUG, "Unhandled Present event %"PRIu16, event->event_type);
+	}
+}
+
+void handle_x11_expose_event(struct wlr_x11_output *output,
+		xcb_expose_event_t *ev) {
+	struct wlr_x11_backend *x11 = output->x11;
+
+	pixman_region32_union_rect(&output->exposed, &output->exposed,
+		ev->x, ev->y, ev->width, ev->height);
+
+	if (output->current_buffer == NULL) {
+		return;
+	}
+
+	// If we have access to the last submitted buffer, re-send the previous
+	// present request
+
+	struct wlr_x11_buffer *x11_buffer =
+		get_or_create_x11_buffer(output, output->current_buffer);
+	if (!x11_buffer) {
+		return;
+	}
+
+	xcb_xfixes_region_t region = create_region(x11, &output->exposed);
+
+	pixman_region32_clear(&output->exposed);
+
+	uint32_t serial = 0;
+	uint32_t options = 0;
+	uint64_t target_msc = output->last_msc;
+	xcb_present_pixmap(x11->xcb, output->win, x11_buffer->pixmap, serial,
+		0, region, 0, 0, XCB_NONE, XCB_NONE, XCB_NONE, options, target_msc,
+		0, 0, 0, NULL);
+
+	if (region != XCB_NONE) {
+		xcb_xfixes_destroy_region(x11->xcb, region);
 	}
 }
