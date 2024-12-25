@@ -974,6 +974,12 @@ static bool drm_connector_commit_state(struct wlr_drm_connector *conn,
 
 	ok = drm_commit(drm, &pending_dev, flags, test_only);
 
+	if (!ok && flags & DRM_MODE_PAGE_FLIP_ASYNC) {
+		// try again if some props change caused a failure here
+		flags &= ~DRM_MODE_PAGE_FLIP_ASYNC;
+		ok = drm_commit(drm, &pending_dev, flags, test_only);
+	}
+
 out:
 	drm_connector_state_finish(&pending);
 	return ok;
