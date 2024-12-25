@@ -26,7 +26,7 @@ sources:
 tasks:
   - setup: |
       cd wlroots
-      CC=gcc meson setup build-gcc --fatal-meson-warnings --default-library=both -Dauto_features=enabled --prefix /usr -Db_sanitize=address,undefined
+      CC=gcc meson setup build-gcc --fatal-meson-warnings --default-library=both -Dauto_features=enabled --prefix /usr -Dbuildtype=debugoptimized -Db_sanitize=address,undefined -Dc_args=-D_FORTIFY_SOURCE=3
       CC=clang meson setup build-clang --fatal-meson-warnings -Dauto_features=enabled -Dc_std=c11
   - gcc: |
       cd wlroots/build-gcc
