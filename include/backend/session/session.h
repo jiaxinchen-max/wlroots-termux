@@ -12,6 +12,9 @@ int libseat_session_open_device(struct wlr_session *base, const char *path);
 void libseat_session_close_device(struct wlr_session *base, int fd);
 bool libseat_change_vt(struct wlr_session *base, unsigned vt);
 
+bool check_double_uevent(const char *stored_sysname, const char *stored_devnode,
+		const char *stored_action, void *data);
+
 void session_init(struct wlr_session *session);
 
 struct wlr_device *session_open_if_kms(struct wlr_session *restrict session,

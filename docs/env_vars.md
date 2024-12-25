@@ -18,6 +18,10 @@ wlroots reads these environment variables
   and Vulkan
 * *WLR_EGL_NO_MODIFIERS*: set to 1 to disable format modifiers in EGL, this can
   be used to understand and work around driver bugs.
+* *WLR_RAPID_HOTPLUG_PREVENT*: set to 1 to wait after an output device hotplug
+  in case another occurs immediately after, and if so, ignore both. This is to
+  work around monitors that implement DisplayPort's "deep sleep" feature, but
+  causes a second delay for each change event due to waiting.
 
 ## DRM backend
 

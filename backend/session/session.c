@@ -16,6 +16,7 @@
 #include <xf86drmMode.h>
 #include "backend/session/session.h"
 #include "util/time.h"
+#include "util/env.h"
 
 #include <libseat.h>
 
@@ -166,30 +167,10 @@ static void read_udev_change_event(struct wlr_device_change_event *event,
 	}
 }
 
-static int handle_udev_event(int fd, uint32_t mask, void *data) {
-	struct wlr_session *session = data;
+static int handle_udev_event(const char *sysname, const char *devnode, const char *action,
+		struct wlr_session *session, struct udev_device *udev_dev, void *data) {
 
-	struct udev_device *udev_dev = udev_monitor_receive_device(session->mon);
-	if (!udev_dev) {
-		return 1;
-	}
-
-	const char *sysname = udev_device_get_sysname(udev_dev);
-	const char *devnode = udev_device_get_devnode(udev_dev);
-	const char *action = udev_device_get_action(udev_dev);
 	wlr_log(WLR_DEBUG, "udev event for %s (%s)", sysname, action);
-
-	if (!is_drm_card(sysname) || !action || !devnode) {
-		goto out;
-	}
-
-	const char *seat = udev_device_get_property_value(udev_dev, "ID_SEAT");
-	if (!seat) {
-		seat = "seat0";
-	}
-	if (session->seat[0] != '\0' && strcmp(session->seat, seat) != 0) {
-		goto out;
-	}
 
 	if (strcmp(action, "add") == 0) {
 		wlr_log(WLR_DEBUG, "DRM device %s added", sysname);
@@ -206,10 +187,19 @@ static int handle_udev_event(int fd, uint32_t mask, void *data) {
 			}
 
 			if (strcmp(action, "change") == 0) {
-				wlr_log(WLR_DEBUG, "DRM device %s changed", sysname);
-				struct wlr_device_change_event event = {0};
-				read_udev_change_event(&event, udev_dev);
-				wl_signal_emit_mutable(&dev->events.change, &event);
+				bool double_uevent_occured;
+				if (env_parse_bool("WLR_RAPID_HOTPLUG_PREVENT")) {
+					double_uevent_occured = check_double_uevent(sysname, devnode, action, data);
+				} else {
+					double_uevent_occured = false;
+				}
+				if (!double_uevent_occured) {
+					wlr_log(WLR_DEBUG, "Resuming change event for DRM device %s", sysname);
+					wlr_log(WLR_DEBUG, "DRM device %s changed", sysname);
+					struct wlr_device_change_event event = {0};
+					read_udev_change_event(&event, udev_dev);
+					wl_signal_emit_mutable(&dev->events.change, &event);
+				}
 			} else if (strcmp(action, "remove") == 0) {
 				wlr_log(WLR_DEBUG, "DRM device %s removed", sysname);
 				wl_signal_emit_mutable(&dev->events.remove, NULL);
@@ -220,9 +210,67 @@ static int handle_udev_event(int fd, uint32_t mask, void *data) {
 		}
 	}
 
+	return 1;
+}
+
+static int handle_udev_event_buffer(int fd, uint32_t mask, void *data) {
+	struct wlr_session *session = data;
+
+	struct udev_device *udev_dev = udev_monitor_receive_device(session->mon);
+	if (!udev_dev) {
+		return 1;
+	}
+
+	const char *sysname = udev_device_get_sysname(udev_dev);
+	const char *devnode = udev_device_get_devnode(udev_dev);
+	const char *action = udev_device_get_action(udev_dev);
+
+	if (!is_drm_card(sysname) || !action || !devnode) {
+		goto out;
+	}
+
+	const char *seat = udev_device_get_property_value(udev_dev, "ID_SEAT");
+	if (!seat) {
+		seat = "seat0";
+	}
+	if (session->seat[0] != '\0' && strcmp(session->seat, seat) != 0) {
+		goto out;
+	}
+
+	handle_udev_event(sysname, devnode, action, session, udev_dev, data);
+
 out:
 	udev_device_unref(udev_dev);
 	return 1;
+}
+
+bool check_double_uevent(const char *stored_sysname, const char *stored_devnode,
+		const char *stored_action, void *data) {
+	bool double_uevent_occured = false;
+
+	wlr_log(WLR_DEBUG, "Sleeping to wait for potential hot-plugs");
+	sleep(1);
+
+	struct wlr_session *session = data;
+	struct udev_device *udev_dev = udev_monitor_receive_device(session->mon);
+
+	const char *sysname = udev_device_get_sysname(udev_dev);
+	const char *devnode = udev_device_get_devnode(udev_dev);
+	const char *action = udev_device_get_action(udev_dev);
+
+	if(sysname != NULL && devnode != NULL && action != NULL) {
+		if (strcmp(stored_sysname, sysname) == 0 && strcmp(stored_devnode, devnode) == 0
+				&& strcmp(stored_action, action) == 0) {
+			wlr_log(WLR_DEBUG, "DRM device %s double uevent ignored", sysname);
+			double_uevent_occured = true;
+		} else {
+		handle_udev_event(sysname, devnode, action, session, udev_dev, data);
+		}
+	}
+
+	udev_device_unref(udev_dev);
+
+	return double_uevent_occured;
 }
 
 static void handle_event_loop_destroy(struct wl_listener *listener, void *data) {
@@ -267,7 +315,7 @@ struct wlr_session *wlr_session_create(struct wl_event_loop *event_loop) {
 	int fd = udev_monitor_get_fd(session->mon);
 
 	session->udev_event = wl_event_loop_add_fd(event_loop, fd,
-		WL_EVENT_READABLE, handle_udev_event, session);
+		WL_EVENT_READABLE, handle_udev_event_buffer, session);
 	if (!session->udev_event) {
 		wlr_log_errno(WLR_ERROR, "Failed to create udev event source");
 		goto error_mon;
