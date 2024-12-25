@@ -14,6 +14,7 @@
 #include <wlr/types/wlr_shm.h>
 #include <wlr/util/log.h>
 #include "render/pixel_format.h"
+#include "util/cleanup.h"
 
 #ifdef __STDC_NO_ATOMICS__
 #error "C11 atomics are required"
@@ -116,6 +117,12 @@ static struct wlr_shm_mapping *mapping_create(int fd, size_t size) {
 	return mapping;
 }
 
+static void defer_munmap(void *data) {
+	struct wlr_shm_mapping *mapping = data;
+	munmap(mapping->data, mapping->size);
+	free(mapping);
+}
+
 static void mapping_consider_destroy(struct wlr_shm_mapping *mapping) {
 	if (!mapping->dropped) {
 		return;
@@ -127,8 +134,7 @@ static void mapping_consider_destroy(struct wlr_shm_mapping *mapping) {
 		}
 	}
 
-	munmap(mapping->data, mapping->size);
-	free(mapping);
+	wlr_cleanup_defer((struct wlr_task){&defer_munmap, mapping});
 }
 
 /**
@@ -397,13 +403,18 @@ static const struct wl_shm_pool_interface pool_impl = {
 	.resize = pool_handle_resize,
 };
 
+static void defer_close_fd(void *data) {
+	int fd = (int)(uintptr_t)data;
+	close(fd);
+}
+
 static void pool_consider_destroy(struct wlr_shm_pool *pool) {
 	if (pool->resource != NULL || !wl_list_empty(&pool->buffers)) {
 		return;
 	}
 
 	mapping_drop(pool->mapping);
-	close(pool->fd);
+	wlr_cleanup_defer((struct wlr_task){&defer_close_fd, (void *)(uintptr_t)pool->fd});
 	free(pool);
 }
 

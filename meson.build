@@ -122,6 +122,7 @@ pixman = dependency('pixman-1',
 )
 math = cc.find_library('m')
 rt = cc.find_library('rt')
+threads = dependency('threads')
 
 wlr_files = []
 wlr_deps = [
@@ -131,6 +132,7 @@ wlr_deps = [
 	pixman,
 	math,
 	rt,
+	threads,
 ]
 
 subdir('protocol')

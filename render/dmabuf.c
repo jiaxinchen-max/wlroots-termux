@@ -1,15 +1,31 @@
 #include <fcntl.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <wlr/render/dmabuf.h>
 #include <wlr/util/log.h>
 #include "render/dmabuf.h"
+#include "util/cleanup.h"
 
-void wlr_dmabuf_attributes_finish(struct wlr_dmabuf_attributes *attribs) {
+static void defer_close_dmabuf(void *data) {
+	struct wlr_dmabuf_attributes *attribs = data;
+
 	for (int i = 0; i < attribs->n_planes; ++i) {
 		close(attribs->fd[i]);
+	}
+	free(attribs);
+}
+
+void wlr_dmabuf_attributes_finish(struct wlr_dmabuf_attributes *attribs) {
+	struct wlr_dmabuf_attributes *attribs_defer = calloc(1, sizeof(struct wlr_dmabuf_attributes));
+
+	attribs_defer->n_planes = attribs->n_planes;
+	for (int i = 0; i < attribs->n_planes; ++i) {
+		attribs_defer->fd[i] = attribs->fd[i];
 		attribs->fd[i] = -1;
 	}
 	attribs->n_planes = 0;
+
+	wlr_cleanup_defer((struct wlr_task){&defer_close_dmabuf, attribs_defer});
 }
 
 bool wlr_dmabuf_attributes_copy(struct wlr_dmabuf_attributes *dst,
