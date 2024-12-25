@@ -263,15 +263,30 @@ static void render_pass_add_rect(struct wlr_render_pass *wlr_pass,
 	struct wlr_box box;
 	wlr_render_rect_options_get_box(options, pass->buffer->buffer, &box);
 
+	struct wlr_box pass_box = {
+		.width = pass->buffer->buffer->width,
+		.height = pass->buffer->buffer->height,
+	};
+
+	enum wlr_render_blend_mode mode =
+		color->a == 1.0 ? WLR_RENDER_BLEND_MODE_NONE : options->blend_mode;
+
 	push_gles2_debug(renderer);
-	setup_blending(color->a == 1.0 ? WLR_RENDER_BLEND_MODE_NONE : options->blend_mode);
 
-	glUseProgram(renderer->shaders.quad.program);
+	if (wlr_box_equal(&pass_box, &box) && mode == WLR_RENDER_BLEND_MODE_NONE) {
+		glClearColor(color->r, color->g, color->b, color->a);
+		glClear(GL_COLOR_BUFFER_BIT);
+	} else {
+		setup_blending(mode);
 
-	set_proj_matrix(renderer->shaders.quad.proj, pass->projection_matrix, &box);
-	glUniform4f(renderer->shaders.quad.color, color->r, color->g, color->b, color->a);
+		glUseProgram(renderer->shaders.quad.program);
 
-	render(&box, options->clip, renderer->shaders.quad.pos_attrib);
+		set_proj_matrix(renderer->shaders.quad.proj, pass->projection_matrix, &box);
+		glUniform4f(renderer->shaders.quad.color, color->r, color->g, color->b, color->a);
+
+		render(&box, options->clip, renderer->shaders.quad.pos_attrib);
+	};
+
 
 	pop_gles2_debug(renderer);
 }
