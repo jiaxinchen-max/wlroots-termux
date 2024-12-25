@@ -22,6 +22,7 @@ big_endian = target_machine.endian() == 'big'
 
 add_project_arguments([
 	'-D_POSIX_C_SOURCE=200809L',
+	'-DWLR_IMPLEMENTATION',
 	'-DWLR_USE_UNSTABLE',
 	'-DWLR_PRIVATE=',
 	'-DWLR_LITTLE_ENDIAN=@0@'.format(little_endian.to_int()),

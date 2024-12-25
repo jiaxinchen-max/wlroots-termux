@@ -11,6 +11,7 @@
 #define WLR_TYPES_WLR_FULLSCREEN_SHELL_V1_H
 
 #include <wayland-server-core.h>
+#include <wlr/api.h>
 #include "fullscreen-shell-unstable-v1-protocol.h"
 
 struct wlr_fullscreen_shell_v1 {
@@ -36,6 +37,7 @@ struct wlr_fullscreen_shell_v1_present_surface_event {
 	struct wlr_output *output; // can be NULL
 };
 
+WLR_DEPRECATED("fullscreen-shell support will be removed in the next version")
 struct wlr_fullscreen_shell_v1 *wlr_fullscreen_shell_v1_create(
 	struct wl_display *display);
 
