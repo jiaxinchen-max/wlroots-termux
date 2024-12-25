@@ -43,6 +43,10 @@ compositors = {
 		'src': 'cairo-buffer.c',
 		'dep': cairo,
 	},
+	'output-tester': {
+		'src': 'output-tester.c',
+		'dep': cairo,
+	},
 	'embedded': {
 		'src': [
 			'embedded.c',
