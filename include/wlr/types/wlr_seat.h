@@ -55,6 +55,13 @@ struct wlr_seat_client {
 	struct wlr_serial_ringset serials;
 	bool needs_touch_frame;
 
+	// The client's current knowledge of the keyboard modifier state.  This
+	// will lag behind the actual state if the client does not have
+	// keyboard focus; it is used by wlr_seat_client_notify_modifiers to
+	// allow actions like ctrl+scroll to work without sending duplicate
+	// events if modifiers are unchanged.
+	struct wlr_keyboard_modifiers tracked_modifiers;
+
 	// When the client doesn't support high-resolution scroll, accumulate deltas
 	// until we can notify a discrete event.
 	// Some mice have a free spinning wheel, making possible to lock the wheel
@@ -525,6 +532,14 @@ void wlr_seat_keyboard_send_key(struct wlr_seat *seat, uint32_t time_msec,
  */
 void wlr_seat_keyboard_send_modifiers(struct wlr_seat *seat,
 		const struct wlr_keyboard_modifiers *modifiers);
+
+/**
+ * Update an additional client's view of the keyboard modifier state.  This
+ * does nothing if the target has keyboard focus or if its view of the modifier
+ * state still matches the current modifier state.
+ */
+void wlr_seat_client_notify_modifiers(struct wlr_seat *seat,
+		struct wlr_seat_client *target);
 
 /**
  * Send a keyboard enter event to the given surface and consider it to be the
