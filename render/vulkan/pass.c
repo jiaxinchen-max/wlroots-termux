@@ -709,6 +709,78 @@ static void render_pass_add_texture(struct wlr_render_pass *wlr_pass,
 	wlr_render_texture_options_get_dst_box(options, &dst_box);
 	float alpha = wlr_render_texture_options_get_alpha(options);
 
+	pixman_region32_t clip;
+	get_clip_region(pass, options->clip, &clip);
+
+	int clip_rects_len;
+	const pixman_box32_t *clip_rects = pixman_region32_rectangles(&clip, &clip_rects_len);
+
+	// Try to use vkCmdCopyImage if we can avoid using a shader.
+	// Note that vkCmdBlitImage would allow us to blit between two formats iff they are both unsigned,
+	// both signed, or both float - for simplicity we only copy between images of the same format.
+	// Blits can also scale arbitrarily, but that makes clip regions hard to track,
+	// and it's unlikely we want to scale anyway.
+	// With these restrictions, we can just use vkCmdCopyImage.
+	uint32_t dst_format;
+	if (pass->srgb_pathway) {
+		struct wlr_dmabuf_attributes attribs;
+		wlr_buffer_get_dmabuf(pass->render_buffer->wlr_buffer, &attribs);
+		dst_format = attribs.format;
+	} else {
+		// our blend buffer format
+		dst_format = DRM_FORMAT_ABGR16161616F;
+	}
+	if (!texture->has_alpha && alpha == 1.0 &&
+			texture->format->drm == dst_format &&
+			options->transform == WL_OUTPUT_TRANSFORM_NORMAL &&
+			// vk takes regions as ints here
+			trunc(src_box.x) == src_box.x && trunc(src_box.y) == src_box.y &&
+			trunc(src_box.width) == src_box.width && trunc(src_box.height) == src_box.height &&
+			src_box.width == dst_box.width && src_box.height == dst_box.height) {
+		VkImageCopy *regions = calloc(clip_rects_len, sizeof(*regions));
+		if (regions == NULL) {
+			wlr_log_errno(WLR_ERROR, "Allocation failure");
+			return;
+		}
+
+		for (int i = 0; i < clip_rects_len; i++) {
+			int32_t src_x = src_box.x + clip_rects[i].x1 - dst_box.x;
+			int32_t src_y = src_box.y + clip_rects[i].y1 - dst_box.y;
+			int32_t dst_x = clip_rects[i].x1;
+			int32_t dst_y = clip_rects[i].y1;
+			uint32_t width = clip_rects[i].x2 - clip_rects[i].x1;
+			uint32_t height = clip_rects[i].y2 - clip_rects[i].y1;
+			regions[i] = (VkImageCopy){
+				.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.srcSubresource.layerCount = 1,
+				.srcOffset = { src_x, src_y, 0 },
+				.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.dstSubresource.layerCount = 1,
+				.dstOffset = { dst_x, dst_y, 0 },
+				.extent = { width, height, 1 },
+			};
+			struct wlr_box clip_box = {
+				.x = clip_rects[i].x1,
+				.y = clip_rects[i].y1,
+				.width = clip_rects[i].x2 - clip_rects[i].x1,
+				.height = clip_rects[i].y2 - clip_rects[i].y1,
+			};
+			struct wlr_box intersection;
+			if (!wlr_box_intersection(&intersection, &dst_box, &clip_box)) {
+				continue;
+			}
+			render_pass_mark_box_updated(pass, &intersection);
+		}
+
+		VkImage dst = pass->srgb_pathway ?
+			pass->render_buffer->image : pass->render_buffer->plain.blend_image;
+		vkCmdCopyImage(cb, texture->image, VK_IMAGE_LAYOUT_GENERAL,
+			dst, VK_IMAGE_LAYOUT_GENERAL,
+			clip_rects_len, regions);
+		free(regions);
+		goto out;
+	}
+
 	float proj[9], matrix[9];
 	wlr_matrix_identity(proj);
 	wlr_matrix_project_box(matrix, &dst_box, options->transform, 0, proj);
@@ -764,11 +836,6 @@ static void render_pass_add_texture(struct wlr_render_pass *wlr_pass,
 		VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(vert_pcr_data), sizeof(float),
 		&alpha);
 
-	pixman_region32_t clip;
-	get_clip_region(pass, options->clip, &clip);
-
-	int clip_rects_len;
-	const pixman_box32_t *clip_rects = pixman_region32_rectangles(&clip, &clip_rects_len);
 	for (int i = 0; i < clip_rects_len; i++) {
 		VkRect2D rect;
 		convert_pixman_box_to_vk_rect(&clip_rects[i], &rect);
@@ -788,6 +855,7 @@ static void render_pass_add_texture(struct wlr_render_pass *wlr_pass,
 		render_pass_mark_box_updated(pass, &intersection);
 	}
 
+out:
 	texture->last_used_cb = pass->command_buffer;
 
 	pixman_region32_fini(&clip);
