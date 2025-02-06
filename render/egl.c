@@ -296,6 +296,7 @@ static bool egl_init_display(struct wlr_egl *egl, EGLDisplay display) {
 		check_egl_ext(display_exts_str, "EGL_EXT_create_context_robustness");
 
 	const char *device_exts_str = NULL, *driver_name = NULL;
+#ifndef __TERMUX__
 	if (egl->exts.EXT_device_query) {
 		EGLAttrib device_attrib;
 		if (!egl->procs.eglQueryDisplayAttribEXT(egl->display,
@@ -335,6 +336,7 @@ static bool egl_init_display(struct wlr_egl *egl, EGLDisplay display) {
 		egl->exts.EXT_device_drm_render_node =
 			check_egl_ext(device_exts_str, "EGL_EXT_device_drm_render_node");
 	}
+#endif
 
 	if (!check_egl_ext(display_exts_str, "EGL_KHR_no_config_context") &&
 			!check_egl_ext(display_exts_str, "EGL_MESA_configless_context")) {
@@ -440,6 +442,7 @@ static bool egl_init(struct wlr_egl *egl, EGLenum platform,
 
 static bool device_has_name(const drmDevice *device, const char *name);
 
+#ifndef __TERMUX__
 static EGLDeviceEXT get_egl_device_from_drm_fd(struct wlr_egl *egl,
 		int drm_fd) {
 	if (egl->procs.eglQueryDevicesEXT == NULL) {
@@ -494,7 +497,9 @@ static EGLDeviceEXT get_egl_device_from_drm_fd(struct wlr_egl *egl,
 
 	return egl_device;
 }
+#endif
 
+#ifndef __TERMUX__
 static int open_render_node(int drm_fd) {
 	char *render_name = drmGetRenderDeviceNameFromFd(drm_fd);
 	if (render_name == NULL) {
@@ -516,6 +521,7 @@ static int open_render_node(int drm_fd) {
 	free(render_name);
 	return render_fd;
 }
+#endif
 
 struct wlr_egl *wlr_egl_create_with_drm_fd(int drm_fd) {
 	struct wlr_egl *egl = egl_create();
@@ -524,6 +530,7 @@ struct wlr_egl *wlr_egl_create_with_drm_fd(int drm_fd) {
 		return NULL;
 	}
 
+#ifndef __TERMUX__
 	if (egl->exts.EXT_platform_device) {
 		/*
 		 * Search for the EGL device matching the DRM fd using the
@@ -541,8 +548,10 @@ struct wlr_egl *wlr_egl_create_with_drm_fd(int drm_fd) {
 	} else {
 		wlr_log(WLR_DEBUG, "EXT_platform_device not supported");
 	}
+#endif
 
 	if (egl->exts.KHR_platform_gbm) {
+#ifndef __TERMUX__
 		int gbm_fd = open_render_node(drm_fd);
 		if (gbm_fd < 0) {
 			wlr_log(WLR_ERROR, "Failed to open DRM render node");
@@ -555,14 +564,19 @@ struct wlr_egl *wlr_egl_create_with_drm_fd(int drm_fd) {
 			wlr_log(WLR_ERROR, "Failed to create GBM device");
 			goto error;
 		}
+#endif
 
 		if (egl_init(egl, EGL_PLATFORM_GBM_KHR, egl->gbm_device)) {
 			wlr_log(WLR_DEBUG, "Using EGL_PLATFORM_GBM_KHR");
 			return egl;
 		}
 
+#ifndef __TERMUX__
 		gbm_device_destroy(egl->gbm_device);
 		close(gbm_fd);
+#else
+		goto error;
+#endif
 	} else {
 		wlr_log(WLR_DEBUG, "KHR_platform_gbm not supported");
 	}

@@ -273,11 +273,13 @@ VkPhysicalDevice vulkan_find_drm_phdev(struct wlr_vk_instance *ini, int drm_fd) 
 		return VK_NULL_HANDLE;
 	}
 
+#ifndef __TERMUX__
 	struct stat drm_stat = {0};
 	if (fstat(drm_fd, &drm_stat) != 0) {
 		wlr_log_errno(WLR_ERROR, "fstat failed");
 		return VK_NULL_HANDLE;
 	}
+#endif
 
 	for (uint32_t i = 0; i < num_phdevs; ++i) {
 		VkPhysicalDevice phdev = phdevs[i];
@@ -313,6 +315,7 @@ VkPhysicalDevice vulkan_find_drm_phdev(struct wlr_vk_instance *ini, int drm_fd) 
 			continue;
 		}
 
+#ifndef __TERMUX__
 		bool has_drm_props = check_extension(avail_ext_props, avail_extc,
 			VK_EXT_PHYSICAL_DEVICE_DRM_EXTENSION_NAME);
 		bool has_driver_props = check_extension(avail_ext_props, avail_extc,
@@ -359,11 +362,18 @@ VkPhysicalDevice vulkan_find_drm_phdev(struct wlr_vk_instance *ini, int drm_fd) 
 				phdev_props.deviceName);
 			return phdev;
 		}
+#else
+		if (check_extension(avail_ext_props, avail_extc, VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME) &&
+				check_extension(avail_ext_props, avail_extc, VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME)) {
+			return phdev;
+		}
+#endif
 	}
 
 	return VK_NULL_HANDLE;
 }
 
+#ifndef __TERMUX__
 int vulkan_open_phdev_drm_fd(VkPhysicalDevice phdev) {
 	// vulkan_find_drm_phdev() already checks that VK_EXT_physical_device_drm
 	// is supported
@@ -409,6 +419,7 @@ int vulkan_open_phdev_drm_fd(VkPhysicalDevice phdev) {
 	drmFreeDevice(&device);
 	return drm_fd;
 }
+#endif
 
 static void load_device_proc(struct wlr_vk_device *dev, const char *name,
 		void *proc_ptr) {

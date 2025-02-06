@@ -890,13 +890,16 @@ static bool set_default_feedback(struct wlr_linux_dmabuf_v1 *linux_dmabuf,
 		return false;
 	}
 
+#ifndef __TERMUX__
 	drmDevice *device = NULL;
 	if (drmGetDeviceFromDevId(feedback->main_device, 0, &device) != 0) {
 		wlr_log_errno(WLR_ERROR, "drmGetDeviceFromDevId failed");
 		goto error_compiled;
 	}
+#endif
 
 	int main_device_fd = -1;
+#ifndef __TERMUX__
 	if (device->available_nodes & (1 << DRM_NODE_RENDER)) {
 		const char *name = device->nodes[DRM_NODE_RENDER];
 		main_device_fd = open(name, O_RDWR | O_CLOEXEC);
@@ -914,6 +917,7 @@ static bool set_default_feedback(struct wlr_linux_dmabuf_v1 *linux_dmabuf,
 			"skipping DMA-BUF import checks", device->nodes[DRM_NODE_PRIMARY]);
 		drmFreeDevice(&device);
 	}
+#endif
 
 	size_t tranches_len =
 		feedback->tranches.size / sizeof(struct wlr_linux_dmabuf_feedback_v1_tranche);
@@ -942,8 +946,10 @@ static bool set_default_feedback(struct wlr_linux_dmabuf_v1 *linux_dmabuf,
 
 error_formats:
 	wlr_drm_format_set_finish(&formats);
+#ifndef __TERMUX__
 error_compiled:
 	compiled_feedback_destroy(compiled);
+#endif
 	return false;
 }
 
@@ -1060,6 +1066,7 @@ void wlr_linux_dmabuf_feedback_v1_finish(struct wlr_linux_dmabuf_feedback_v1 *fe
 	wl_array_release(&feedback->tranches);
 }
 
+#ifndef __TERMUX__
 static bool devid_from_fd(int fd, dev_t *devid) {
 	struct stat stat;
 	if (fstat(fd, &stat) != 0) {
@@ -1069,6 +1076,7 @@ static bool devid_from_fd(int fd, dev_t *devid) {
 	*devid = stat.st_rdev;
 	return true;
 }
+#endif
 
 static bool is_secondary_drm_backend(struct wlr_backend *backend) {
 #if WLR_HAS_DRM_BACKEND
@@ -1087,6 +1095,7 @@ bool wlr_linux_dmabuf_feedback_v1_init_with_options(struct wlr_linux_dmabuf_feed
 
 	*feedback = (struct wlr_linux_dmabuf_feedback_v1){0};
 
+#ifndef __TERMUX__
 	int renderer_drm_fd = wlr_renderer_get_drm_fd(options->main_renderer);
 	if (renderer_drm_fd < 0) {
 		wlr_log(WLR_ERROR, "Failed to get renderer DRM FD");
@@ -1096,6 +1105,9 @@ bool wlr_linux_dmabuf_feedback_v1_init_with_options(struct wlr_linux_dmabuf_feed
 	if (!devid_from_fd(renderer_drm_fd, &renderer_dev)) {
 		goto error;
 	}
+#else
+	dev_t renderer_dev = -1;
+#endif
 
 	feedback->main_device = renderer_dev;
 
@@ -1123,6 +1135,7 @@ bool wlr_linux_dmabuf_feedback_v1_init_with_options(struct wlr_linux_dmabuf_feed
 		}
 	} else if (options->scanout_primary_output != NULL &&
 			!is_secondary_drm_backend(options->scanout_primary_output->backend)) {
+#ifndef __TERMUX__
 		int backend_drm_fd = wlr_backend_get_drm_fd(options->scanout_primary_output->backend);
 		if (backend_drm_fd < 0) {
 			wlr_log(WLR_ERROR, "Failed to get backend DRM FD");
@@ -1132,6 +1145,9 @@ bool wlr_linux_dmabuf_feedback_v1_init_with_options(struct wlr_linux_dmabuf_feed
 		if (!devid_from_fd(backend_drm_fd, &backend_dev)) {
 			goto error;
 		}
+#else
+		dev_t backend_dev = -1;
+#endif
 
 		const struct wlr_drm_format_set *scanout_formats =
 			wlr_output_get_primary_formats(options->scanout_primary_output, WLR_BUFFER_CAP_DMABUF);

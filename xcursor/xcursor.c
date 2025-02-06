@@ -486,11 +486,11 @@ xcursor_xc_file_load_images(FILE *file, int size)
  */
 
 #ifndef ICONDIR
-#define ICONDIR "/usr/X11R6/lib/X11/icons"
+#define ICONDIR "/data/data/com.termux/files/usr/X11R6/lib/X11/icons"
 #endif
 
 #ifndef XCURSORPATH
-#define XCURSORPATH "~/.icons:/usr/share/icons:/usr/share/pixmaps:~/.cursors:/usr/share/cursors/xorg-x11:"ICONDIR
+#define XCURSORPATH "~/.icons:/data/data/com.termux/files/usr/share/icons:/data/data/com.termux/files/usr/share/pixmaps:~/.cursors:/data/data/com.termux/files/usr/share/cursors/xorg-x11:"ICONDIR
 #endif
 
 #define XDG_DATA_HOME_FALLBACK "~/.local/share"

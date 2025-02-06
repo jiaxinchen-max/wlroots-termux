@@ -6,7 +6,9 @@
 #include <wlr/render/interface.h>
 #include <wlr/render/pixman.h>
 #include <wlr/render/wlr_renderer.h>
+#ifndef __TERMUX__
 #include <wlr/types/wlr_drm.h>
+#endif
 #include <wlr/types/wlr_linux_dmabuf_v1.h>
 #include <wlr/types/wlr_shm.h>
 #include <wlr/util/box.h>
@@ -83,7 +85,9 @@ bool wlr_renderer_init_wl_display(struct wlr_renderer *r,
 	}
 
 	if (wlr_renderer_get_texture_formats(r, WLR_BUFFER_CAP_DMABUF) != NULL &&
+#ifndef __TERMUX__
 			wlr_renderer_get_drm_fd(r) >= 0 &&
+#endif
 			wlr_linux_dmabuf_v1_create_with_renderer(wl_display, 4, r) == NULL) {
 		return false;
 	}
@@ -91,6 +95,7 @@ bool wlr_renderer_init_wl_display(struct wlr_renderer *r,
 	return true;
 }
 
+#ifndef __TERMUX__
 static int open_drm_render_node(void) {
 	uint32_t flags = 0;
 	int devices_len = drmGetDevices2(flags, NULL, 0);
@@ -136,9 +141,11 @@ out:
 
 	return fd;
 }
+#endif
 
 static bool open_preferred_drm_fd(struct wlr_backend *backend, int *drm_fd_ptr,
 		bool *own_drm_fd) {
+#ifndef __TERMUX__
 	if (*drm_fd_ptr >= 0) {
 		return true;
 	}
@@ -186,6 +193,9 @@ static bool open_preferred_drm_fd(struct wlr_backend *backend, int *drm_fd_ptr,
 	}
 
 	return false;
+#else
+	return true;
+#endif
 }
 
 static void log_creation_failure(bool is_auto, const char *msg) {
