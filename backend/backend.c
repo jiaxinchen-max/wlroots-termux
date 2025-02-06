@@ -40,6 +40,10 @@
 #include <wlr/backend/termuxgui.h>
 #endif
 
+#if WLR_HAS_TERMUX_DISPLAY_CLIENT_BACKEND
+#include <wlr/backend/termuxdc.h>
+#endif
+
 #define WAIT_SESSION_TIMEOUT 10000 // ms
 
 void wlr_backend_init(struct wlr_backend *backend,
@@ -263,6 +267,25 @@ static struct wlr_backend *attempt_tgui_backend(struct wl_event_loop *loop) {
 #endif
 }
 
+static struct wlr_backend *attempt_termuxdc_backend(struct wl_event_loop *loop) {
+#if WLR_HAS_TERMUX_DISPLAY_CLIENT_BACKEND
+	struct wlr_backend *backend = wlr_termuxdc_backend_create(loop);
+	if (backend == NULL) {
+		return NULL;
+	}
+
+	size_t outputs = parse_outputs_env("WLR_termuxdc_OUTPUTS");
+	for (size_t i = 0; i < outputs; ++i) {
+		wlr_termuxdc_output_create(backend);
+	}
+
+	return backend;
+#else
+	wlr_log(WLR_ERROR, "Cannot create Termux:Display client backend: disabled at compile-time");
+	return NULL;
+#endif
+}
+
 static struct wlr_backend *attempt_drm_backend(struct wlr_backend *backend, struct wlr_session *session) {
 #if WLR_HAS_DRM_BACKEND
 	struct wlr_device *gpus[8];
@@ -330,6 +353,8 @@ static bool attempt_backend_by_name(struct wl_event_loop *loop,
 		backend = attempt_headless_backend(loop);
 	} else if (strcmp(name, "tgui") == 0) {
 		backend = attempt_tgui_backend(loop);
+	}else if (strcmp(name, "termuxdc") == 0) {
+		backend = attempt_termuxdc_backend(loop);
 	} else if (strcmp(name, "drm") == 0 || strcmp(name, "libinput") == 0) {
 		// DRM and libinput need a session
 		if (*session_ptr == NULL) {
@@ -429,6 +454,12 @@ struct wlr_backend *wlr_backend_autocreate(struct wl_event_loop *loop,
 	struct wlr_backend *tgui_backend = attempt_tgui_backend(loop);
 	if (tgui_backend) {
 		wlr_multi_backend_add(multi, tgui_backend);
+		goto success;
+	}
+
+	struct wlr_backend *termuxdc_backend = attempt_termuxdc_backend(loop);
+	if (termuxdc_backend) {
+		wlr_multi_backend_add(multi, termuxdc_backend);
 		goto success;
 	}
 

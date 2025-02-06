@@ -7,28 +7,28 @@
 
 #include <drm_fourcc.h>
 
-#include "backend/termux-display-client.h"
+#include "backend/termuxdc.h"
 #include "render/drm_format_set.h"
 #include "render/pixel_format.h"
 
 static const struct wlr_buffer_impl buffer_impl;
 static const struct wlr_allocator_interface allocator_impl;
 
-struct wlr_tdc_buffer *tdc_buffer_from_buffer(struct wlr_buffer *wlr_buffer) {
+struct wlr_termuxdc_buffer *termuxdc_buffer_from_buffer(struct wlr_buffer *wlr_buffer) {
     assert(wlr_buffer->impl == &buffer_impl);
-    struct wlr_tdc_buffer *buffer = wl_container_of(wlr_buffer, buffer, wlr_buffer);
+    struct wlr_termuxdc_buffer *buffer = wl_container_of(wlr_buffer, buffer, wlr_buffer);
     return buffer;
 }
 
-static struct wlr_tdc_allocator *
-tdc_allocator_from_allocator(struct wlr_allocator *wlr_allocator) {
+static struct wlr_termuxdc_allocator *
+termuxdc_allocator_from_allocator(struct wlr_allocator *wlr_allocator) {
     assert(wlr_allocator->impl == &allocator_impl);
-    struct wlr_tdc_allocator *alloc = wl_container_of(wlr_allocator, alloc, wlr_allocator);
+    struct wlr_termuxdc_allocator *alloc = wl_container_of(wlr_allocator, alloc, wlr_allocator);
     return alloc;
 }
 
 static void buffer_destroy(struct wlr_buffer *wlr_buffer) {
-    struct wlr_tdc_buffer *buffer = tdc_buffer_from_buffer(wlr_buffer);
+    struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
     if (buffer->data) {
         buffer->unlock();
     }
@@ -39,7 +39,7 @@ static void buffer_destroy(struct wlr_buffer *wlr_buffer) {
 
 static bool buffer_get_dmabuf(struct wlr_buffer *wlr_buffer,
                               struct wlr_dmabuf_attributes *dmabuf) {
-    struct wlr_tdc_buffer *buffer = tdc_buffer_from_buffer(wlr_buffer);
+    struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
     memcpy(dmabuf, &buffer->dmabuf, sizeof(*dmabuf));
     return true;
 }
@@ -49,7 +49,7 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
                                   void **data,
                                   uint32_t *format,
                                   size_t *stride) {
-    struct wlr_tdc_buffer *buffer = tdc_buffer_from_buffer(wlr_buffer);
+    struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
 
     if (buffer->data == NULL) {
         buffer->lock(&buffer->data);
@@ -66,7 +66,7 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
 }
 
 static void end_data_ptr_access(struct wlr_buffer *wlr_buffer) {
-    struct wlr_tdc_buffer *buffer = tdc_buffer_from_buffer(wlr_buffer);
+    struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
     if (buffer->data) {
         buffer->unlock();
         buffer->data = NULL;
@@ -85,11 +85,11 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
                                                   int width,
                                                   int height,
                                                   const struct wlr_drm_format *format) {
-    struct wlr_tdc_allocator *alloc = tdc_allocator_from_allocator(wlr_allocator);
+    struct wlr_termuxdc_allocator *alloc = termuxdc_allocator_from_allocator(wlr_allocator);
 
     if (!wlr_drm_format_has(format, DRM_FORMAT_MOD_INVALID) &&
         !wlr_drm_format_has(format, DRM_FORMAT_MOD_LINEAR)) {
-        wlr_log(WLR_ERROR, "TGUI allocator only supports INVALID and "
+        wlr_log(WLR_ERROR, "Temux DC allocator only supports INVALID and "
                            "LINEAR modifiers");
         return NULL;
     }
@@ -100,7 +100,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
         return NULL;
     }
 
-    struct wlr_tdc_buffer *buffer = calloc(1, sizeof(*buffer));
+    struct wlr_termuxdc_buffer *buffer = calloc(1, sizeof(*buffer));
     if (buffer == NULL) {
         return NULL;
     }
@@ -110,9 +110,8 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     buffer->lock = &BeginDisplayDraw;
     buffer->unlock = &EndDisplayDraw;
 
-    DisplayClientStart();
 
-    wlr_log(WLR_DEBUG, "Created tdc_hardware_buffer %dx%d", width, height);
+    wlr_log(WLR_DEBUG, "Created termuxdc_hardware_buffer %dx%d", width, height);
 
 
     buffer->dmabuf = (struct wlr_dmabuf_attributes) {
@@ -128,7 +127,6 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     };
 
     buffer->format = format->format;
-    buffer->conn = alloc->conn;
     return &buffer->wlr_buffer;
 
 fail:
@@ -143,12 +141,11 @@ static const struct wlr_allocator_interface allocator_impl = {
     .create_buffer = allocator_create_buffer,
 };
 
-struct wlr_allocator *wlr_tdc_allocator_create(struct wlr_tdc_backend *backend) {
-    struct wlr_tdc_allocator *allocator = calloc(1, sizeof(*allocator));
+struct wlr_allocator *wlr_termuxdc_allocator_create(struct wlr_termuxdc_backend *backend) {
+    struct wlr_termuxdc_allocator *allocator = calloc(1, sizeof(*allocator));
     if (allocator == NULL) {
         return NULL;
     }
-    allocator->conn = backend->conn;
 
     wlr_allocator_init(&allocator->wlr_allocator, &allocator_impl,
                        WLR_BUFFER_CAP_DMABUF | WLR_BUFFER_CAP_DATA_PTR);

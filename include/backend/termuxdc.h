@@ -77,7 +77,7 @@ static inline int wlr_queue_length(struct wlr_queue *queue) {
     return ret;
 }
 
-struct wlr_tdc_backend {
+struct wlr_termuxdc_backend {
     struct wlr_backend backend;
     struct wl_event_loop *loop;
     struct wlr_allocator *allocator;
@@ -92,17 +92,17 @@ struct wlr_tdc_backend {
 
     
     struct wlr_queue event_queue;
-    int InputEvent_fd;
-    pthread_t InputEvent_thread;
-    struct wl_event_source *InputEvent_source;
+    int input_event_fd;
+    pthread_t input_event_thread;
+    struct wl_event_source *input_event_source;
 };
 
-struct wlr_tdc_allocator {
+struct wlr_termuxdc_allocator {
     struct wlr_allocator wlr_allocator;
    
 };
 
-struct wlr_tdc_buffer {
+struct wlr_termuxdc_buffer {
     struct wlr_buffer wlr_buffer;
 
     void *data;
@@ -114,10 +114,10 @@ struct wlr_tdc_buffer {
     int (*unlock)();
 };
 
-struct wlr_tdc_output {
+struct wlr_termuxdc_output {
     struct wlr_output wlr_output;
 
-    struct wlr_tdc_backend *backend;
+    struct wlr_termuxdc_backend *backend;
     struct wl_list link;
 
     bool foreground;
@@ -144,18 +144,18 @@ struct wlr_InputEvent {
     struct wl_list link;
 };
 
-struct wlr_tdc_backend *tdc_backend_from_backend(struct wlr_backend *wlr_backend);
+struct wlr_termuxdc_backend *tdc_backend_from_backend(struct wlr_backend *wlr_backend);
 
-struct wlr_allocator *wlr_tdc_allocator_create(struct wlr_tdc_backend *backend);
+struct wlr_allocator *wlr_termuxdc_allocator_create(struct wlr_termuxdc_backend *backend);
 
-struct wlr_allocator *wlr_tdc_backend_get_allocator(struct wlr_tdc_backend *backend);
+struct wlr_allocator *wlr_termuxdc_backend_get_allocator(struct wlr_termuxdc_backend *backend);
 
-struct wlr_tdc_buffer *tdc_buffer_from_buffer(struct wlr_buffer *wlr_buffer);
+struct wlr_termuxdc_buffer *tdc_buffer_from_buffer(struct wlr_buffer *wlr_buffer);
 
-int handle_activity_event(InputEvent *e, struct wlr_tdc_output *output);
+int handle_activity_event(InputEvent *e, struct wlr_termuxdc_output *output);
 
-void handle_touch_event(InputEvent *e, struct wlr_tdc_output *output, uint64_t time_ms);
+void handle_touch_event(InputEvent *e, struct wlr_termuxdc_output *output, uint64_t time_ms);
 
-void handle_keyboard_event(InputEvent *e, struct wlr_tdc_output *output, uint64_t time_ms);
+void handle_keyboard_event(InputEvent *e, struct wlr_termuxdc_output *output, uint64_t time_ms);
 
 #endif

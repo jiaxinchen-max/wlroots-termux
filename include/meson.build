@@ -11,8 +11,8 @@ endif
 if not features.get('termuxgui-backend')
 	exclude_files += 'backend/termuxgui.h'
 endif
-if not features.get('termux-display-client-backend')
-	exclude_files += 'backend/termux-display-client.h'
+if not features.get('termuxdc-backend')
+	exclude_files += 'backend/termuxdc.h'
 endif
 if not features.get('x11-backend')
 	exclude_files += 'backend/x11.h'

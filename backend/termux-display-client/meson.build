@@ -1,6 +1,6 @@
-termux-display-client = cc.find_library('termux-display-client')
+termuxdc = cc.find_library('termux-display-client')
 
-if not termux-display-client.found()
+if not termuxdc-display-client.found()
 	subdir_done()
 endif
 
@@ -11,5 +11,5 @@ wlr_files += files(
 	'allocator.c',
 )
 
-wlr_deps += termux-display-client
-features += { 'termux-display-client-backend': true }
+wlr_deps += termux-termuxdc-client
+features += { 'termuxdc-backend': true }

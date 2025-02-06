@@ -2,10 +2,10 @@
 #include <linux/input-event-codes.h>
 #include <xkbcommon/xkbcommon.h>
 
-#include "backend/termux-display-client.h"
+#include "backend/termuxdc.h"
 
 static void
-send_pointer_position(struct wlr_tdc_output *output, double x, double y, uint32_t time_ms) {
+send_pointer_position(struct wlr_termuxdc_output *output, double x, double y, uint32_t time_ms) {
     struct wlr_pointer_motion_absolute_event ev = {
         .pointer = &output->backend->pointer,
         .time_msec = time_ms,
@@ -16,7 +16,7 @@ send_pointer_position(struct wlr_tdc_output *output, double x, double y, uint32_
     wl_signal_emit_mutable(&output->backend->pointer.events.frame, &output->backend->pointer);
 }
 
-static void send_pointer_button(struct wlr_tdc_output *output,
+static void send_pointer_button(struct wlr_termuxdc_output *output,
                                 uint32_t button,
                                 enum wl_pointer_button_state state,
                                 uint32_t time_ms) {
@@ -30,7 +30,7 @@ static void send_pointer_button(struct wlr_tdc_output *output,
     wl_signal_emit_mutable(&output->backend->pointer.events.frame, &output->backend->pointer);
 }
 
-static void send_pointer_axis(struct wlr_tdc_output *output, int32_t delta, uint64_t time_ms) {
+static void send_pointer_axis(struct wlr_termuxdc_output *output, int32_t delta, uint64_t time_ms) {
     struct wlr_pointer_axis_event ev = {
         .pointer = &output->backend->pointer,
         .time_msec = time_ms,
@@ -43,7 +43,7 @@ static void send_pointer_axis(struct wlr_tdc_output *output, int32_t delta, uint
     wl_signal_emit_mutable(&output->backend->pointer.events.frame, &output->backend->pointer);
 }
 
-static void move_cursor(struct wlr_tdc_output *output, double dx, double dy, uint32_t time_ms) {
+static void move_cursor(struct wlr_termuxdc_output *output, double dx, double dy, uint32_t time_ms) {
     output->cursor_x -= dx;
     output->cursor_y -= dy;
 
@@ -60,7 +60,7 @@ static void move_cursor(struct wlr_tdc_output *output, double dx, double dy, uin
     send_pointer_position(output, output->cursor_x, output->cursor_y, time_ms);
 }
 
-void handle_touch_event(InputEvent *e, struct wlr_tdc_output *output, uint64_t time_ms) {
+void handle_touch_event(InputEvent *e, struct wlr_termuxdc_output *output, uint64_t time_ms) {
     switch (e->touch.action) {
     case TGUI_TOUCH_DOWN: {
         tdc_touch_pointer *p = &e->touch.pointers[e->touch.index][0];
@@ -212,7 +212,7 @@ static bool get_keycode_and_modifier(uint32_t code, uint32_t *keycode, uint32_t 
     return false;
 }
 
-void handle_keyboard_event(InputEvent *e, struct wlr_tdc_output *output, uint64_t time_ms) {
+void handle_keyboard_event(InputEvent *e, struct wlr_termuxdc_output *output, uint64_t time_ms) {
     uint32_t keycode, modifiers;
 
     if (!get_keycode_and_modifier(e->key.code, &keycode, &modifiers)) {

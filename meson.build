@@ -90,7 +90,7 @@ features = {
 	'x11-backend': false,
 	'libinput-backend': false,
 	'termuxgui-backend': false,
-	'termux-display-client-backend': false,
+	'termuxdc-backend': false,
 	'xwayland': false,
 	'gles2-renderer': false,
 	'vulkan-renderer': false,

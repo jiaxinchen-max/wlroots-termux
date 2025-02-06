@@ -5,7 +5,7 @@
 #include <sys/eventfd.h>
 #include <unistd.h>
 
-#include "backend/termux-display-client.h"
+#include "backend/termuxdc.h"
 #include "util/time.h"
 #include "wlr/render/swapchain.h"
 
@@ -15,9 +15,9 @@ static const uint32_t SUPPORTED_OUTPUT_STATE =
 
 static size_t last_output_num = 0;
 
-static struct wlr_tdc_output *tdc_output_from_output(struct wlr_output *wlr_output) {
+static struct wlr_termuxdc_output *termuxdc_output_from_output(struct wlr_output *wlr_output) {
     assert(wlr_output_is_tgui(wlr_output));
-    return (struct wlr_tdc_output *) wlr_output;
+    return (struct wlr_termuxdc_output *) wlr_output;
 }
 
 static bool output_test(struct wlr_output *wlr_output, const struct wlr_output_state *state) {
@@ -41,14 +41,14 @@ static bool output_test(struct wlr_output *wlr_output, const struct wlr_output_s
 }
 
 static bool output_commit(struct wlr_output *wlr_output, const struct wlr_output_state *state) {
-    struct wlr_tdc_output *output = tdc_output_from_output(wlr_output);
+    struct wlr_termuxdc_output *output = termuxdc_output_from_output(wlr_output);
 
     if (!output_test(wlr_output, state)) {
         return false;
     }
 
     if (state->committed & WLR_OUTPUT_STATE_BUFFER) {
-        struct wlr_tdc_buffer *buffer = tdc_buffer_from_buffer(state->buffer);
+        struct wlr_termuxdc_buffer *buffer = tdc_buffer_from_buffer(state->buffer);
         wlr_buffer_lock(&buffer->wlr_buffer);
         wlr_queue_push(&output->present_queue, &buffer->link);
     }
@@ -57,14 +57,14 @@ static bool output_commit(struct wlr_output *wlr_output, const struct wlr_output
 }
 
 static void output_destroy(struct wlr_output *wlr_output) {
-    struct wlr_tdc_output *output = tdc_output_from_output(wlr_output);
+    struct wlr_termuxdc_output *output = termuxdc_output_from_output(wlr_output);
     output->present_thread_run = false;
 
     wl_list_remove(&output->link);
     wl_event_source_remove(output->present_complete_source);
     close(output->present_complete_fd);
 
-    tdc_activity_finish(output->backend->conn, output->activity);
+    InputDestroy();
 
     struct wl_list tmp_buffer, *tmp;
     wlr_queue_push(&output->present_queue, &tmp_buffer);
@@ -74,14 +74,14 @@ static void output_destroy(struct wlr_output *wlr_output) {
         if (tmp == &tmp_buffer) {
             continue;
         }
-        struct wlr_tdc_buffer *buf = wl_container_of(tmp, buf, link);
+        struct wlr_termuxdc_buffer *buf = wl_container_of(tmp, buf, link);
         wlr_buffer_unlock(&buf->wlr_buffer);
     }
     while ((tmp = wlr_queue_pull(&output->idle_queue, true)) != NULL) {
         if (tmp == &tmp_buffer) {
             continue;
         }
-        struct wlr_tdc_buffer *buf = wl_container_of(tmp, buf, link);
+        struct wlr_termuxdc_buffer *buf = wl_container_of(tmp, buf, link);
         wlr_buffer_unlock(&buf->wlr_buffer);
     }
 
@@ -95,29 +95,29 @@ static const struct wlr_output_impl output_impl = {
     .commit = output_commit,
 };
 
-bool wlr_output_is_tgui(struct wlr_output *wlr_output) {
+bool wlr_output_is_tdc(struct wlr_output *wlr_output) {
     return wlr_output->impl == &output_impl;
 }
 
-static void output_create_tdc_surface(struct wlr_tdc_output *output) {
-    TRY_LOG(tdc_activity_set_orientation, output->backend->conn, output->activity,
-            TGUI_ORIENTATION_LANDSCAPE);
-    TRY_LOG(tdc_activity_configure_insets, output->backend->conn, output->activity,
-            TGUI_INSET_NAVIGATION_BAR, TGUI_INSET_BEHAVIOUR_TRANSIENT);
-    TRY_LOG(tdc_create_surface_view, output->backend->conn, output->activity, &output->surface,
-            NULL, TGUI_VIS_VISIBLE, true);
-    TRY_LOG(tdc_surface_view_config, output->backend->conn, output->activity, output->surface, 0,
-            TGUI_MISMATCH_STICK_TOPLEFT, TGUI_MISMATCH_STICK_TOPLEFT, 0);
-    TRY_LOG(tdc_send_touch_event, output->backend->conn, output->activity, output->surface,
-            true);
-    TRY_LOG(tdc_focus, output->backend->conn, output->activity, output->surface, false);
+static void output_create_termuxdc_surface(struct wlr_termuxdc_output *output) {
+    // TRY_LOG(tdc_activity_set_orientation, output->backend->conn, output->activity,
+    //         TGUI_ORIENTATION_LANDSCAPE);
+    // TRY_LOG(tdc_activity_configure_insets, output->backend->conn, output->activity,
+    //         TGUI_INSET_NAVIGATION_BAR, TGUI_INSET_BEHAVIOUR_TRANSIENT);
+    // TRY_LOG(tdc_create_surface_view, output->backend->conn, output->activity, &output->surface,
+    //         NULL, TGUI_VIS_VISIBLE, true);
+    // TRY_LOG(tdc_surface_view_config, output->backend->conn, output->activity, output->surface, 0,
+    //         TGUI_MISMATCH_STICK_TOPLEFT, TGUI_MISMATCH_STICK_TOPLEFT, 0);
+    // TRY_LOG(tdc_send_touch_event, output->backend->conn, output->activity, output->surface,
+    //         true);
+    // TRY_LOG(tdc_focus, output->backend->conn, output->activity, output->surface, false);
 }
 
-int handle_activity_event(InputEvent *e, struct wlr_tdc_output *output) {
+int handle_activity_event(InputEvent *e, struct wlr_termuxdc_output *output) {
     uint64_t time_ms = get_current_time_msec();
     switch (e->type) {
     case TGUI_EVENT_CREATE: {
-        output_create_tdc_surface(output);
+        output_create_termuxdc_surface(output);
         break;
     }
     case TGUI_EVENT_START:
@@ -135,7 +135,7 @@ int handle_activity_event(InputEvent *e, struct wlr_tdc_output *output) {
     }
     case TGUI_EVENT_KEY: {
         if (e->key.code == 4 /* back */) {
-            tdc_focus(output->backend->conn, output->activity, output->surface, true);
+            // tdc_focus(output->backend->conn, output->activity, output->surface, true);
         } else {
             handle_keyboard_event(e, output, time_ms);
         }
@@ -168,7 +168,7 @@ int handle_activity_event(InputEvent *e, struct wlr_tdc_output *output) {
 
         if (wlr_queue_length(&output->idle_queue) > 0) {
             struct wl_list *elm = wlr_queue_pull(&output->idle_queue, true);
-            struct wlr_tdc_buffer *buf = wl_container_of(elm, buf, link);
+            struct wlr_termuxdc_buffer *buf = wl_container_of(elm, buf, link);
             wlr_buffer_unlock(&buf->wlr_buffer);
             redraw = true;
         } else if (wlr_queue_length(&output->present_queue) < WLR_SWAPCHAIN_CAP - 1) {
@@ -188,12 +188,12 @@ int handle_activity_event(InputEvent *e, struct wlr_tdc_output *output) {
 }
 
 static void *present_queue_thread(void *data) {
-    struct wlr_tdc_output *output = data;
+    struct wlr_termuxdc_output *output = data;
     output->present_thread_run = true;
 
     while (output->present_thread_run) {
         struct wl_list *elm = wlr_queue_pull(&output->present_queue, false);
-        struct wlr_tdc_buffer *buffer = wl_container_of(elm, buffer, link);
+        struct wlr_termuxdc_buffer *buffer = wl_container_of(elm, buffer, link);
 
         if (!output->present_thread_run) {
             wlr_queue_push(&output->idle_queue, &buffer->link);
@@ -201,8 +201,8 @@ static void *present_queue_thread(void *data) {
         }
 
         if (output->foreground) {
-            TRY_LOG(tdc_surface_view_set_buffer, output->backend->conn, output->activity,
-                    output->surface, &buffer->buffer);
+            // TRY_LOG(tdc_surface_view_set_buffer, output->backend->conn, output->activity,
+            //         output->surface, &buffer->buffer);
         } else {
             usleep(1000000000 / DEFAULT_REFRESH);
         }
@@ -216,7 +216,7 @@ static void *present_queue_thread(void *data) {
 }
 
 static int present_complete(int fd, uint32_t mask, void *data) {
-    struct wlr_tdc_output *output = data;
+    struct wlr_termuxdc_output *output = data;
 
     if ((mask & WL_EVENT_HANGUP) || (mask & WL_EVENT_ERROR)) {
         if (mask & WL_EVENT_ERROR) {
@@ -244,27 +244,27 @@ static int present_complete(int fd, uint32_t mask, void *data) {
     return 0;
 }
 
-struct wlr_output *wlr_tdc_output_create(struct wlr_backend *wlr_backend) {
-    struct wlr_tdc_backend *backend = tdc_backend_from_backend(wlr_backend);
+struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
+    struct wlr_termuxdc_backend *backend = tdc_backend_from_backend(wlr_backend);
 
     if (!backend->started) {
         ++backend->requested_outputs;
         return NULL;
     }
 
-    struct wlr_tdc_output *output = calloc(1, sizeof(*output));
+    struct wlr_termuxdc_output *output = calloc(1, sizeof(*output));
     if (output == NULL) {
-        wlr_log(WLR_ERROR, "Failed to allocate wlr_tdc_output");
+        wlr_log(WLR_ERROR, "Failed to allocate wlr_termuxdc_output");
         return NULL;
     }
     output->backend = backend;
 
-    if (tdc_activity_create(backend->conn, &output->activity, TGUI_ACTIVITY_NORMAL, NULL,
-                             true)) {
-        wlr_log(WLR_ERROR, "Failed to create tdc_activity");
-        free(output);
-        return NULL;
-    }
+    // if (tdc_activity_create(backend->conn, &output->activity, TGUI_ACTIVITY_NORMAL, NULL,
+    //                          true)) {
+    //     wlr_log(WLR_ERROR, "Failed to create tdc_activity");
+    //     free(output);
+    //     return NULL;
+    // }
     struct wlr_output_state state;
     wlr_output_state_init(&state);
     wlr_output_state_set_render_format(&state, DRM_FORMAT_ABGR8888);
@@ -283,7 +283,7 @@ struct wlr_output *wlr_tdc_output_create(struct wlr_backend *wlr_backend) {
     char name[64];
     snprintf(name, sizeof(name), "TGUI-%zu", output_num);
     wlr_output_set_name(wlr_output, name);
-    tdc_activity_set_task_description(output->backend->conn, output->activity, NULL, 0, name);
+    // tdc_activity_set_task_description(output->backend->conn, output->activity, NULL, 0, name);
 
     char description[128];
     snprintf(description, sizeof(description), "Termux:GUI output %zu", output_num);
