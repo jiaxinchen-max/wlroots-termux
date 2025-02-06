@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <pthread.h>
 #include <termuxgui/termuxgui.h>
+#include <termux/display/client/client.h>
+#include <termux/display/client/InputEvent.h>
 
 #include <wlr/backend/interface.h>
 #include <wlr/backend/termuxgui.h>
@@ -75,7 +77,7 @@ static inline int wlr_queue_length(struct wlr_queue *queue) {
     return ret;
 }
 
-struct wlr_tgui_backend {
+struct wlr_tdc_backend {
     struct wlr_backend backend;
     struct wl_event_loop *loop;
     struct wlr_allocator *allocator;
@@ -88,48 +90,36 @@ struct wlr_tgui_backend {
     struct wl_listener event_loop_destroy;
     bool started;
 
-    tgui_connection conn;
+    
     struct wlr_queue event_queue;
-    int tgui_event_fd;
-    pthread_t tgui_event_thread;
-    struct wl_event_source *tgui_event_source;
+    int InputEvent_fd;
+    pthread_t InputEvent_thread;
+    struct wl_event_source *InputEvent_source;
 };
 
-struct wlr_tgui_allocator {
+struct wlr_tdc_allocator {
     struct wlr_allocator wlr_allocator;
-    tgui_connection conn;
+   
 };
 
-struct wlr_tgui_buffer {
+struct wlr_tdc_buffer {
     struct wlr_buffer wlr_buffer;
 
     void *data;
     uint32_t format;
-    tgui_connection conn;
-    tgui_hardware_buffer buffer;
-    AHardwareBuffer_Desc desc;
     struct wl_list link;
     struct wlr_dmabuf_attributes dmabuf;
 
-    void *dlhandle;
-    int (*lock)(AHardwareBuffer *buffer,
-                uint64_t usage,
-                int32_t fence,
-                const ARect *rect,
-                void **outVirtualAddress);
-    int (*unlock)(AHardwareBuffer *buffer, int32_t *fence);
-    void (*describe)(const AHardwareBuffer *buffer, AHardwareBuffer_Desc *outDesc);
-    const native_handle_t *(*getNativeHandle)(const AHardwareBuffer *buffer);
+    int (*lock)(void **outVirtualAddress);
+    int (*unlock)();
 };
 
-struct wlr_tgui_output {
+struct wlr_tdc_output {
     struct wlr_output wlr_output;
 
-    struct wlr_tgui_backend *backend;
+    struct wlr_tdc_backend *backend;
     struct wl_list link;
 
-    tgui_activity activity;
-    tgui_view surface;
     bool foreground;
 
     struct wlr_queue present_queue;
@@ -149,23 +139,23 @@ struct wlr_tgui_output {
     double cursor_x, cursor_y;
 };
 
-struct wlr_tgui_event {
-    tgui_event e;
+struct wlr_InputEvent {
+    InputEvent e;
     struct wl_list link;
 };
 
-struct wlr_tgui_backend *tgui_backend_from_backend(struct wlr_backend *wlr_backend);
+struct wlr_tdc_backend *tdc_backend_from_backend(struct wlr_backend *wlr_backend);
 
-struct wlr_allocator *wlr_tgui_allocator_create(struct wlr_tgui_backend *backend);
+struct wlr_allocator *wlr_tdc_allocator_create(struct wlr_tdc_backend *backend);
 
-struct wlr_allocator *wlr_tgui_backend_get_allocator(struct wlr_tgui_backend *backend);
+struct wlr_allocator *wlr_tdc_backend_get_allocator(struct wlr_tdc_backend *backend);
 
-struct wlr_tgui_buffer *tgui_buffer_from_buffer(struct wlr_buffer *wlr_buffer);
+struct wlr_tdc_buffer *tdc_buffer_from_buffer(struct wlr_buffer *wlr_buffer);
 
-int handle_activity_event(tgui_event *e, struct wlr_tgui_output *output);
+int handle_activity_event(InputEvent *e, struct wlr_tdc_output *output);
 
-void handle_touch_event(tgui_event *e, struct wlr_tgui_output *output, uint64_t time_ms);
+void handle_touch_event(InputEvent *e, struct wlr_tdc_output *output, uint64_t time_ms);
 
-void handle_keyboard_event(tgui_event *e, struct wlr_tgui_output *output, uint64_t time_ms);
+void handle_keyboard_event(InputEvent *e, struct wlr_tdc_output *output, uint64_t time_ms);
 
 #endif
