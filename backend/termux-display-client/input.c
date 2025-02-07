@@ -1,6 +1,7 @@
 #include <android/keycodes.h>
 #include <linux/input-event-codes.h>
 #include <xkbcommon/xkbcommon.h>
+#include <termux/display/client/InputEvent.h>
 
 #include "backend/termuxdc.h"
 
@@ -61,9 +62,9 @@ static void move_cursor(struct wlr_termuxdc_output *output, double dx, double dy
 }
 
 void handle_touch_event(InputEvent *e, struct wlr_termuxdc_output *output, uint64_t time_ms) {
-    switch (e->touch.action) {
-    case TGUI_TOUCH_DOWN: {
-        tdc_touch_pointer *p = &e->touch.pointers[e->touch.index][0];
+    switch (e->type) {
+    case EVENT_TOUCH_DOWN: {
+        touch_event *p = &e->touch;
         memset(&output->touch_pointer, 0, sizeof(output->touch_pointer));
         output->touch_pointer.id = p->id;
         output->touch_pointer.max = 0;
@@ -72,9 +73,9 @@ void handle_touch_event(InputEvent *e, struct wlr_termuxdc_output *output, uint6
         output->touch_pointer.time_ms = time_ms;
         break;
     }
-    case TGUI_TOUCH_UP:
-    case TGUI_TOUCH_POINTER_UP: {
-        tdc_touch_pointer *p = &e->touch.pointers[e->touch.index][0];
+    case EVENT_TOUCH_UP:
+    case EVENT_TOUCH_POINTER_UP: {
+        touch_event *p = &e->touch;
         if (p->id == output->touch_pointer.id) {
             if (time_ms - output->touch_pointer.time_ms < 200 &&
                 output->touch_pointer.down == false && output->touch_pointer.moved == false) {
@@ -93,9 +94,9 @@ void handle_touch_event(InputEvent *e, struct wlr_termuxdc_output *output, uint6
         }
         break;
     }
-    case TGUI_TOUCH_MOVE: {
+    case EVENT_TOUCH_MOVE: {
         for (uint32_t i = 0u; i < e->touch.num_pointers; i++) {
-            tdc_touch_pointer *p = &e->touch.pointers[0][i];
+            touch_event *p = &e->touch_events[i];
             if (p->id != output->touch_pointer.id) {
                 break;
             }
@@ -215,16 +216,16 @@ static bool get_keycode_and_modifier(uint32_t code, uint32_t *keycode, uint32_t 
 void handle_keyboard_event(InputEvent *e, struct wlr_termuxdc_output *output, uint64_t time_ms) {
     uint32_t keycode, modifiers;
 
-    if (!get_keycode_and_modifier(e->key.code, &keycode, &modifiers)) {
-        wlr_log(WLR_ERROR, "Unhandled keycode %d %c", e->key.code, e->key.codePoint);
+    if (!get_keycode_and_modifier(e->key.key, &keycode, &modifiers)) {
+        wlr_log(WLR_ERROR, "Unhandled keycode %d %c", e->key.key, e->key.key);
         return;
     }
 
-    if (e->key.mod & (TGUI_MOD_LSHIFT | TGUI_MOD_RSHIFT))
+    if (e->key.mod & (TDC_MOD_LSHIFT | TDC_MOD_RSHIFT))
         modifiers |= WLR_MODIFIER_SHIFT;
-    if (e->key.mod & (TGUI_MOD_LCTRL | TGUI_MOD_RCTRL))
+    if (e->key.mod & (TDC_MOD_LCTRL | TDC_MOD_RCTRL))
         modifiers |= WLR_MODIFIER_CTRL;
-    if (e->key.mod & TGUI_MOD_ALT)
+    if (e->key.mod & TDC_MOD_ALT)
         modifiers |= WLR_MODIFIER_ALT;
 
     xkb_layout_index_t group =
@@ -234,7 +235,7 @@ void handle_keyboard_event(InputEvent *e, struct wlr_termuxdc_output *output, ui
     struct wlr_keyboard_key_event key = {
         .time_msec = time_ms,
         .keycode = keycode,
-        .state = e->key.down ? WL_KEYBOARD_KEY_STATE_PRESSED : WL_KEYBOARD_KEY_STATE_RELEASED,
+        .state = e->key.state ? WL_KEYBOARD_KEY_STATE_PRESSED : WL_KEYBOARD_KEY_STATE_RELEASED,
         .update_state = true,
     };
     wlr_keyboard_notify_key(&output->backend->keyboard, &key);

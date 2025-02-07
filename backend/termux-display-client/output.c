@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
+#include <termux/display/client/client.h>
+#include <termux/display/client/InputEvent.h>
 
 #include "backend/termuxdc.h"
 #include "util/time.h"
@@ -64,7 +66,6 @@ static void output_destroy(struct wlr_output *wlr_output) {
     wl_event_source_remove(output->present_complete_source);
     close(output->present_complete_fd);
 
-    InputDestroy();
 
     struct wl_list tmp_buffer, *tmp;
     wlr_queue_push(&output->present_queue, &tmp_buffer);
@@ -84,7 +85,7 @@ static void output_destroy(struct wlr_output *wlr_output) {
         struct wlr_termuxdc_buffer *buf = wl_container_of(tmp, buf, link);
         wlr_buffer_unlock(&buf->wlr_buffer);
     }
-
+    DisplayDestroy();
     wlr_queue_destroy(&output->present_queue);
     wlr_queue_destroy(&output->idle_queue);
     free(output);
@@ -99,57 +100,22 @@ bool wlr_output_is_tdc(struct wlr_output *wlr_output) {
     return wlr_output->impl == &output_impl;
 }
 
-static void output_create_termuxdc_surface(struct wlr_termuxdc_output *output) {
-    // TRY_LOG(tdc_activity_set_orientation, output->backend->conn, output->activity,
-    //         TGUI_ORIENTATION_LANDSCAPE);
-    // TRY_LOG(tdc_activity_configure_insets, output->backend->conn, output->activity,
-    //         TGUI_INSET_NAVIGATION_BAR, TGUI_INSET_BEHAVIOUR_TRANSIENT);
-    // TRY_LOG(tdc_create_surface_view, output->backend->conn, output->activity, &output->surface,
-    //         NULL, TGUI_VIS_VISIBLE, true);
-    // TRY_LOG(tdc_surface_view_config, output->backend->conn, output->activity, output->surface, 0,
-    //         TGUI_MISMATCH_STICK_TOPLEFT, TGUI_MISMATCH_STICK_TOPLEFT, 0);
-    // TRY_LOG(tdc_send_touch_event, output->backend->conn, output->activity, output->surface,
-    //         true);
-    // TRY_LOG(tdc_focus, output->backend->conn, output->activity, output->surface, false);
-}
-
 int handle_activity_event(InputEvent *e, struct wlr_termuxdc_output *output) {
     uint64_t time_ms = get_current_time_msec();
     switch (e->type) {
-    case TGUI_EVENT_CREATE: {
-        output_create_termuxdc_surface(output);
+    case EVENT_KEY: {
+        handle_keyboard_event(e, output, time_ms);
         break;
     }
-    case TGUI_EVENT_START:
-    case TGUI_EVENT_RESUME: {
-        output->foreground = true;
-        break;
-    }
-    case TGUI_EVENT_PAUSE: {
-        output->foreground = false;
-        break;
-    }
-    case TGUI_EVENT_DESTROY: {
-        wlr_output_destroy(&output->wlr_output);
-        break;
-    }
-    case TGUI_EVENT_KEY: {
-        if (e->key.code == 4 /* back */) {
-            // tdc_focus(output->backend->conn, output->activity, output->surface, true);
-        } else {
-            handle_keyboard_event(e, output, time_ms);
-        }
-        break;
-    }
-    case TGUI_EVENT_TOUCH: {
+    case EVENT_TOUCH: {
         handle_touch_event(e, output, time_ms);
         break;
     }
-    case TGUI_EVENT_SURFACE_CHANGED: {
+    case EVENT_SCREEN_SIZE: {
         struct wlr_output_state state;
         wlr_output_state_init(&state);
-        wlr_output_state_set_custom_mode(&state, e->surfaceChanged.width,
-                                         e->surfaceChanged.height, DEFAULT_REFRESH);
+        wlr_output_state_set_custom_mode(&state, e->screenSize.width,
+                                         e->screenSize.height, DEFAULT_REFRESH);
         wlr_output_send_request_state(&output->wlr_output, &state);
         wlr_output_state_finish(&state);
 
@@ -163,7 +129,7 @@ int handle_activity_event(InputEvent *e, struct wlr_termuxdc_output *output) {
         wl_signal_emit_mutable(&output->backend->pointer.events.frame, &output->backend->pointer);
         break;
     }
-    case TGUI_EVENT_FRAME_COMPLETE: {
+    case EVENT_FRAME_COMPLETE: {
         bool redraw = false;
 
         if (wlr_queue_length(&output->idle_queue) > 0) {
@@ -200,12 +166,7 @@ static void *present_queue_thread(void *data) {
             break;
         }
 
-        if (output->foreground) {
-            // TRY_LOG(tdc_surface_view_set_buffer, output->backend->conn, output->activity,
-            //         output->surface, &buffer->buffer);
-        } else {
-            usleep(1000000000 / DEFAULT_REFRESH);
-        }
+       usleep(1000000000 / DEFAULT_REFRESH);
 
         wlr_queue_push(&output->idle_queue, &buffer->link);
 
@@ -265,6 +226,9 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     //     free(output);
     //     return NULL;
     // }
+
+    DisplayClientInit();
+
     struct wlr_output_state state;
     wlr_output_state_init(&state);
     wlr_output_state_set_render_format(&state, DRM_FORMAT_ABGR8888);
@@ -280,13 +244,8 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
 
     size_t output_num = ++last_output_num;
 
-    char name[64];
-    snprintf(name, sizeof(name), "TGUI-%zu", output_num);
-    wlr_output_set_name(wlr_output, name);
-    // tdc_activity_set_task_description(output->backend->conn, output->activity, NULL, 0, name);
-
     char description[128];
-    snprintf(description, sizeof(description), "Termux:GUI output %zu", output_num);
+    snprintf(description, sizeof(description), "Termux:Display client output %zu", output_num);
     wlr_output_set_description(wlr_output, description);
 
     uint32_t events = WL_EVENT_READABLE | WL_EVENT_ERROR | WL_EVENT_HANGUP;

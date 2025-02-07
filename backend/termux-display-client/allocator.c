@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <drm_fourcc.h>
+#include <termux/display/client/client.h>
 
 #include "backend/termuxdc.h"
 #include "render/drm_format_set.h"
@@ -61,7 +62,7 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
 
     *data = buffer->data;
     *format = buffer->format;
-    *stride = buffer->desc.stride * 4;
+    *stride = 4;
     return true;
 }
 
@@ -107,8 +108,8 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     wlr_buffer_init(&buffer->wlr_buffer, &buffer_impl, width, height);
 
     DisplayClientInit(width,height,4);
-    buffer->lock = &BeginDisplayDraw;
-    buffer->unlock = &EndDisplayDraw;
+    buffer->lock = BeginDisplayDraw;
+    buffer->unlock = EndDisplayDraw;
 
 
     wlr_log(WLR_DEBUG, "Created termuxdc_hardware_buffer %dx%d", width, height);

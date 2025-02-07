@@ -45,11 +45,10 @@ static void backend_destroy(struct wlr_backend *wlr_backend) {
     wlr_keyboard_finish(&backend->keyboard);
     wlr_backend_finish(wlr_backend);
 
-    DisplayDestroy();
     pthread_join(backend->input_event_thread, NULL);
     wlr_queue_destroy(&backend->event_queue);
 
-    // close(backend->input_event_fd);
+    close(backend->input_event_fd);
     free(backend);
 }
 
@@ -73,7 +72,7 @@ static int handle_termuxdc_event(int fd, uint32_t mask, void *data) {
 
     if ((mask & WL_EVENT_HANGUP) || (mask & WL_EVENT_ERROR)) {
         if (mask & WL_EVENT_ERROR) {
-            wlr_log(WLR_ERROR, "Failed to read from tgui event");
+            wlr_log(WLR_ERROR, "Failed to read from termuxdc event");
             wlr_backend_destroy(&backend->backend);
         }
         return 0;
@@ -94,16 +93,16 @@ static int handle_termuxdc_event(int fd, uint32_t mask, void *data) {
     struct wlr_termuxdc_output *output, *output_tmp;
     wl_list_for_each_safe(output, output_tmp, &backend->outputs, link) {
         // if (event->e.activity == output->activity) {
-        //     handle_activity_event(&event->e, output);
+            handle_activity_event(&event->e, output);
         // }
     }
-    termuxdc_event_destroy(&event->e);
+    // termuxdc_event_destroy(&event->e);
     free(event);
 
     return 0;
 }
 
-static void *tdc_event_thread(void *data) {
+static void *termuxdc_event_thread(void *data) {
     struct wlr_termuxdc_backend *backend = data;
 
     InputEvent event;
@@ -143,9 +142,9 @@ struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
     wlr_backend_init(&backend->backend, &backend_impl);
 
     backend->loop = loop;
-    backend->input_event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE);
+    // backend->input_event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE);
+    backend->input_event_fd = GetInputSocket();
 
-    DisplayClientStart();
     backend->allocator = wlr_termuxdc_allocator_create(backend);
 
     wlr_pointer_init(&backend->pointer, &termuxdc_pointer_impl, "termuxdc-pointer");
@@ -161,7 +160,7 @@ struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
                                                       events, handle_termuxdc_event, backend);
 
     wlr_queue_init(&backend->event_queue);
-    pthread_create(&backend->input_event_thread, NULL, tdc_event_thread, backend);
+    pthread_create(&backend->input_event_thread, NULL, termuxdc_event_thread, backend);
 
     return &backend->backend;
 }
