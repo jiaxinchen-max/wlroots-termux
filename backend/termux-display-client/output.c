@@ -227,7 +227,7 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     //     return NULL;
     // }
 
-    DisplayClientInit();
+    // DisplayClientInit(1920,1080,4);
 
     struct wlr_output_state state;
     wlr_output_state_init(&state);
