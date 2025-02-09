@@ -1,6 +1,6 @@
 termuxdc = cc.find_library('termux-display-client')
 
-if not termuxdc-display-client.found()
+if not termuxdc.found()
 	subdir_done()
 endif
 
@@ -11,5 +11,5 @@ wlr_files += files(
 	'allocator.c',
 )
 
-wlr_deps += termux-termuxdc-client
+wlr_deps += termuxdc
 features += { 'termuxdc-backend': true }

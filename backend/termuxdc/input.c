@@ -1,7 +1,7 @@
 #include <android/keycodes.h>
 #include <linux/input-event-codes.h>
 #include <xkbcommon/xkbcommon.h>
-#include <termux/display/client/InputEvent.h>
+#include <termux/display/client/termuxdc_event.h>
 
 #include "backend/termuxdc.h"
 
@@ -61,7 +61,7 @@ static void move_cursor(struct wlr_termuxdc_output *output, double dx, double dy
     send_pointer_position(output, output->cursor_x, output->cursor_y, time_ms);
 }
 
-void handle_touch_event(InputEvent *e, struct wlr_termuxdc_output *output, uint64_t time_ms) {
+void handle_termuxdc_touch_event(termuxdc_event *e, struct wlr_termuxdc_output *output, uint64_t time_ms) {
     switch (e->type) {
     case EVENT_TOUCH_DOWN: {
         touch_event *p = &e->touch;
@@ -213,7 +213,7 @@ static bool get_keycode_and_modifier(uint32_t code, uint32_t *keycode, uint32_t 
     return false;
 }
 
-void handle_keyboard_event(InputEvent *e, struct wlr_termuxdc_output *output, uint64_t time_ms) {
+void handle_termuxdc_keyboard_event(termuxdc_event *e, struct wlr_termuxdc_output *output, uint64_t time_ms) {
     uint32_t keycode, modifiers;
 
     if (!get_keycode_and_modifier(e->key.key, &keycode, &modifiers)) {

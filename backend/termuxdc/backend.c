@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include "backend/termuxdc.h"
+#include "wlr/backend/termuxdc.h"
 #include <termux/display/client/client.h>
 
 struct wlr_termuxdc_backend *termuxdc_backend_from_backend(struct wlr_backend *wlr_backend) {
@@ -15,7 +16,7 @@ struct wlr_termuxdc_backend *termuxdc_backend_from_backend(struct wlr_backend *w
 static bool backend_start(struct wlr_backend *wlr_backend) {
     struct wlr_termuxdc_backend *backend = termuxdc_backend_from_backend(wlr_backend);
     backend->started = true;
-    wlr_log(WLR_INFO, "Starting Termux:GUI backend");
+    wlr_log(WLR_INFO, "Starting Termux:Display client backend");
 
     wl_signal_emit_mutable(&backend->backend.events.new_input, &backend->keyboard.base);
     wl_signal_emit_mutable(&backend->backend.events.new_input, &backend->pointer.base);
@@ -85,7 +86,7 @@ static int handle_termuxdc_event(int fd, uint32_t mask, void *data) {
 
     struct wl_list *elm = wlr_queue_pull(&backend->event_queue, true);
     if (elm == NULL) {
-        wlr_log(WLR_ERROR, "tgui event queue is empty");
+        wlr_log(WLR_ERROR, "termuxdc event queue is empty");
         return 0;
     }
     struct wlr_termuxdc_event *event = wl_container_of(elm, event, link);
@@ -93,7 +94,7 @@ static int handle_termuxdc_event(int fd, uint32_t mask, void *data) {
     struct wlr_termuxdc_output *output, *output_tmp;
     wl_list_for_each_safe(output, output_tmp, &backend->outputs, link) {
         // if (event->e.activity == output->activity) {
-            handle_activity_event(&event->e, output);
+            handle_termuxdc_server_event(&event->e, output);
         // }
     }
     // termuxdc_event_destroy(&event->e);
@@ -105,18 +106,18 @@ static int handle_termuxdc_event(int fd, uint32_t mask, void *data) {
 static void *termuxdc_event_thread(void *data) {
     struct wlr_termuxdc_backend *backend = data;
 
-    InputEvent event;
-    while (tdc_wait_event(backend->conn, &event) == TGUI_ERR_OK) {
+    termuxdc_event event;
+    while (event_wait(&event) == TERMUX_DC_OK) {
         struct wlr_termuxdc_event *wlr_event = calloc(1, sizeof(*wlr_event));
         if (wlr_event) {
-            memcpy(&wlr_event->e, &event, sizeof(tdc_event));
+            memcpy(&wlr_event->e, &event, sizeof(termuxdc_event));
 
             wlr_queue_push(&backend->event_queue, &wlr_event->link);
 
-            eventfd_write(backend->tdc_event_fd, 1);
+            eventfd_write(backend->input_event_fd, 1);
         } else {
-            wlr_log(WLR_ERROR, "tgui event loss: out of memory");
-            tdc_event_destroy(&event);
+            wlr_log(WLR_ERROR, "termuxdc event loss: out of memory");
+            // termuxdc_event_destroy(&event);
         }
     }
 
@@ -143,7 +144,7 @@ struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
 
     backend->loop = loop;
     // backend->input_event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE);
-    backend->input_event_fd = GetInputSocket();
+    backend->input_event_fd = get_input_socket();
 
     backend->allocator = wlr_termuxdc_allocator_create(backend);
 

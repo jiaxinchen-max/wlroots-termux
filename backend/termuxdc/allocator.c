@@ -87,6 +87,8 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
                                                   int height,
                                                   const struct wlr_drm_format *format) {
     struct wlr_termuxdc_allocator *alloc = termuxdc_allocator_from_allocator(wlr_allocator);
+    
+    wlr_log(WLR_INFO, "Temux DC bufer cap %d", alloc->wlr_allocator.buffer_caps);
 
     if (!wlr_drm_format_has(format, DRM_FORMAT_MOD_INVALID) &&
         !wlr_drm_format_has(format, DRM_FORMAT_MOD_LINEAR)) {
@@ -107,23 +109,26 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     }
     wlr_buffer_init(&buffer->wlr_buffer, &buffer_impl, width, height);
 
-    DisplayClientInit(width,height,4);
-    buffer->lock = BeginDisplayDraw;
-    buffer->unlock = EndDisplayDraw;
+    int ret = display_client_init(width,height,4);
+    if (ret!=TERMUX_DC_OK){
+        goto fail;
+    }
+    buffer->lock = begin_display_draw;
+    buffer->unlock = end_display_draw;
 
 
     wlr_log(WLR_DEBUG, "Created termuxdc_hardware_buffer %dx%d", width, height);
-
+    
 
     buffer->dmabuf = (struct wlr_dmabuf_attributes) {
-        .width = buffer->desc.stride,
-        .height = buffer->desc.height,
+        .width = width,
+        .height = height,
         .n_planes = 1,
         .format = format->format,
         .modifier = DRM_FORMAT_MOD_LINEAR,
         .offset[0] = 0,
-        .stride[0] = buffer->desc.stride * 4,
-        .fd[0] = fd,
+        // .stride[0] = buffer->desc.stride * 4,
+        // .fd[0] = fd,
 
     };
 

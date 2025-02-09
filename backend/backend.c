@@ -40,7 +40,7 @@
 #include <wlr/backend/termuxgui.h>
 #endif
 
-#if WLR_HAS_TERMUX_DISPLAY_CLIENT_BACKEND
+#if WLR_HAS_TERMUXDC_BACKEND
 #include <wlr/backend/termuxdc.h>
 #endif
 
@@ -268,7 +268,7 @@ static struct wlr_backend *attempt_tgui_backend(struct wl_event_loop *loop) {
 }
 
 static struct wlr_backend *attempt_termuxdc_backend(struct wl_event_loop *loop) {
-#if WLR_HAS_TERMUX_DISPLAY_CLIENT_BACKEND
+#if WLR_HAS_TERMUXDC_BACKEND
 	struct wlr_backend *backend = wlr_termuxdc_backend_create(loop);
 	if (backend == NULL) {
 		return NULL;

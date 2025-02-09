@@ -1,12 +1,12 @@
-#ifndef BACKEND_TERMUX_DISPLAY_CLIENT_H
-#define BACKEND_TERMUX_DISPLAY_CLIENT_H
+#ifndef BACKEND_TERMUXDC_H
+#define BACKEND_TERMUXDC_H
 
 #include <android/hardware_buffer.h>
 #include <assert.h>
 #include <pthread.h>
 #include <termuxgui/termuxgui.h>
 #include <termux/display/client/client.h>
-#include <termux/display/client/InputEvent.h>
+#include <termux/display/client/termuxdc_event.h>
 
 #include <wlr/backend/interface.h>
 #include <wlr/backend/termuxgui.h>
@@ -139,23 +139,23 @@ struct wlr_termuxdc_output {
     double cursor_x, cursor_y;
 };
 
-struct wlr_InputEvent {
-    InputEvent e;
+struct wlr_termuxdc_event {
+    termuxdc_event e;
     struct wl_list link;
 };
 
-struct wlr_termuxdc_backend *tdc_backend_from_backend(struct wlr_backend *wlr_backend);
+struct wlr_termuxdc_backend *termuxdc_backend_from_backend(struct wlr_backend *wlr_backend);
 
 struct wlr_allocator *wlr_termuxdc_allocator_create(struct wlr_termuxdc_backend *backend);
 
 struct wlr_allocator *wlr_termuxdc_backend_get_allocator(struct wlr_termuxdc_backend *backend);
 
-struct wlr_termuxdc_buffer *tdc_buffer_from_buffer(struct wlr_buffer *wlr_buffer);
+struct wlr_termuxdc_buffer *termuxdc_buffer_from_buffer(struct wlr_buffer *wlr_buffer);
 
-int handle_activity_event(InputEvent *e, struct wlr_termuxdc_output *output);
+int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *output);
 
-void handle_touch_event(InputEvent *e, struct wlr_termuxdc_output *output, uint64_t time_ms);
+void handle_termuxdc_touch_event(termuxdc_event *e, struct wlr_termuxdc_output *output, uint64_t time_ms);
 
-void handle_keyboard_event(InputEvent *e, struct wlr_termuxdc_output *output, uint64_t time_ms);
+void handle_termuxdc_keyboard_event(termuxdc_event *e, struct wlr_termuxdc_output *output, uint64_t time_ms);
 
 #endif

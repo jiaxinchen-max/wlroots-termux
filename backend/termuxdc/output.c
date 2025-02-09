@@ -5,11 +5,12 @@
 #include <sys/eventfd.h>
 #include <unistd.h>
 #include <termux/display/client/client.h>
-#include <termux/display/client/InputEvent.h>
+#include <termux/display/client/termuxdc_event.h>
 
 #include "backend/termuxdc.h"
 #include "util/time.h"
 #include "wlr/render/swapchain.h"
+#include "wlr/backend/termuxdc.h"
 
 static const uint32_t SUPPORTED_OUTPUT_STATE =
     WLR_OUTPUT_STATE_BACKEND_OPTIONAL | WLR_OUTPUT_STATE_BUFFER | WLR_OUTPUT_STATE_ENABLED |
@@ -50,7 +51,7 @@ static bool output_commit(struct wlr_output *wlr_output, const struct wlr_output
     }
 
     if (state->committed & WLR_OUTPUT_STATE_BUFFER) {
-        struct wlr_termuxdc_buffer *buffer = tdc_buffer_from_buffer(state->buffer);
+        struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(state->buffer);
         wlr_buffer_lock(&buffer->wlr_buffer);
         wlr_queue_push(&output->present_queue, &buffer->link);
     }
@@ -85,7 +86,7 @@ static void output_destroy(struct wlr_output *wlr_output) {
         struct wlr_termuxdc_buffer *buf = wl_container_of(tmp, buf, link);
         wlr_buffer_unlock(&buf->wlr_buffer);
     }
-    DisplayDestroy();
+    display_destroy();
     wlr_queue_destroy(&output->present_queue);
     wlr_queue_destroy(&output->idle_queue);
     free(output);
@@ -96,19 +97,19 @@ static const struct wlr_output_impl output_impl = {
     .commit = output_commit,
 };
 
-bool wlr_output_is_tdc(struct wlr_output *wlr_output) {
+bool wlr_output_is_termuxdc(struct wlr_output *wlr_output) {
     return wlr_output->impl == &output_impl;
 }
 
-int handle_activity_event(InputEvent *e, struct wlr_termuxdc_output *output) {
+int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *output) {
     uint64_t time_ms = get_current_time_msec();
     switch (e->type) {
     case EVENT_KEY: {
-        handle_keyboard_event(e, output, time_ms);
+        handle_termuxdc_keyboard_event(e, output, time_ms);
         break;
     }
     case EVENT_TOUCH: {
-        handle_touch_event(e, output, time_ms);
+        handle_termuxdc_touch_event(e, output, time_ms);
         break;
     }
     case EVENT_SCREEN_SIZE: {
@@ -206,7 +207,7 @@ static int present_complete(int fd, uint32_t mask, void *data) {
 }
 
 struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
-    struct wlr_termuxdc_backend *backend = tdc_backend_from_backend(wlr_backend);
+    struct wlr_termuxdc_backend *backend = termuxdc_backend_from_backend(wlr_backend);
 
     if (!backend->started) {
         ++backend->requested_outputs;
@@ -227,7 +228,7 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     //     return NULL;
     // }
 
-    // DisplayClientInit(1920,1080,4);
+    // display_client_init(1920,1080,4);
 
     struct wlr_output_state state;
     wlr_output_state_init(&state);
