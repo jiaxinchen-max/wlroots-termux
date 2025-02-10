@@ -4,12 +4,11 @@
 #include <android/hardware_buffer.h>
 #include <assert.h>
 #include <pthread.h>
-#include <termuxgui/termuxgui.h>
 #include <termux/display/client/client.h>
 #include <termux/display/client/termuxdc_event.h>
 
 #include <wlr/backend/interface.h>
-#include <wlr/backend/termuxgui.h>
+#include <wlr/backend/termuxdc.h>
 #include <wlr/interfaces/wlr_buffer.h>
 #include <wlr/interfaces/wlr_keyboard.h>
 #include <wlr/interfaces/wlr_output.h>
