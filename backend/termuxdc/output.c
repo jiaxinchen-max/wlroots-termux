@@ -18,7 +18,7 @@ static const uint32_t SUPPORTED_OUTPUT_STATE =
 static size_t last_output_num = 0;
 
 static struct wlr_termuxdc_output *termuxdc_output_from_output(struct wlr_output *wlr_output) {
-    assert(wlr_output_is_tgui(wlr_output));
+    assert(wlr_output_is_termuxdc(wlr_output));
     return (struct wlr_termuxdc_output *) wlr_output;
 }
 
