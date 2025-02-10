@@ -142,8 +142,7 @@ struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
     wlr_backend_init(&backend->backend, &backend_impl);
 
     backend->loop = loop;
-    // backend->input_event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE);
-    backend->input_event_fd = get_input_socket();
+    backend->input_event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE);
 
     backend->allocator = wlr_termuxdc_allocator_create(backend);
 
