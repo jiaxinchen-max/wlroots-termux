@@ -5,7 +5,6 @@
 #include <unistd.h>
 
 #include "backend/termuxdc.h"
-#include "wlr/backend/termuxdc.h"
 #include <termux/display/client/client.h>
 
 struct wlr_termuxdc_backend *termuxdc_backend_from_backend(struct wlr_backend *wlr_backend) {

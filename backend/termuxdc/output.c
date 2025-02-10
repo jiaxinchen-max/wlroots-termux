@@ -10,7 +10,6 @@
 #include "backend/termuxdc.h"
 #include "util/time.h"
 #include "wlr/render/swapchain.h"
-#include "wlr/backend/termuxdc.h"
 
 static const uint32_t SUPPORTED_OUTPUT_STATE =
     WLR_OUTPUT_STATE_BACKEND_OPTIONAL | WLR_OUTPUT_STATE_BUFFER | WLR_OUTPUT_STATE_ENABLED |
