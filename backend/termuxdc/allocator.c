@@ -120,6 +120,23 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     wlr_log(WLR_DEBUG, "Created termuxdc_hardware_buffer %dx%d", width, height);
     
 
+    struct termuxdc_buffer *termux_buffer_ptr = get_termuxdc_buffer();
+    
+    const native_handle_t *handle = get_native_handler();
+    int fd = -1;
+    for (int i = 0; i < handle->numFds; i++) {
+        size_t size = lseek(handle->data[i], 0, SEEK_END);
+        if (size < (termux_buffer_ptr->desc.stride * termux_buffer_ptr->desc.height * 4))
+            continue;
+
+        fd = fcntl(handle->data[i], F_DUPFD_CLOEXEC, 0);
+        break;
+    }
+
+    if (fd < 0) {
+        wlr_log(WLR_ERROR, "Failed to get dmabuf");
+        goto fail;
+    }
     buffer->dmabuf = (struct wlr_dmabuf_attributes) {
         .width = width,
         .height = height,
@@ -127,8 +144,8 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
         .format = format->format,
         .modifier = DRM_FORMAT_MOD_LINEAR,
         .offset[0] = 0,
-        // .stride[0] = buffer->desc.stride * 4,
-        // .fd[0] = fd,
+        .stride[0] = termux_buffer_ptr->desc.stride * 4,
+        .fd[0] = fd,
 
     };
 
