@@ -122,6 +122,10 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     wlr_log(WLR_DEBUG, "Created termuxdc_hardware_buffer %dx%d", width, height);
     
     const termuxdc_native_handle_t *handle = get_native_handler();
+    if(!handle){
+        wlr_log(WLR_DEBUG, "get native handler failed");
+        goto fail;
+    }
     wlr_log(WLR_DEBUG, "termuxdc_native_handle_t version=%d,numFds=%d,numInts=%d", handle->version, handle->numFds,handle->numInts);
     int fd = -1;
     for (int i = 0; i < handle->numFds; i++) {
