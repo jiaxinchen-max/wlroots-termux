@@ -31,7 +31,7 @@ termuxdc_allocator_from_allocator(struct wlr_allocator *wlr_allocator) {
 static void buffer_destroy(struct wlr_buffer *wlr_buffer) {
     struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
     if (buffer->data) {
-        buffer->unlock();
+        buffer->termuxdc_buffer_ptr->end_draw();
     }
 
     wlr_dmabuf_attributes_finish(&buffer->dmabuf);
@@ -53,7 +53,7 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
     struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
 
     if (buffer->data == NULL) {
-        buffer->lock(&buffer->data);
+        buffer->termuxdc_buffer_ptr->begin_draw(&buffer->data);
         if (buffer->data == NULL) {
             wlr_log(WLR_ERROR, "AHardwareBuffer_lock failed");
             return false;
@@ -61,15 +61,15 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
     }
 
     *data = buffer->data;
-    *format = buffer->format;
-    *stride = 4;
+    *format = buffer->termuxdc_buffer_ptr->format;
+    *stride = buffer->termuxdc_buffer_ptr->desc.stride;
     return true;
 }
 
 static void end_data_ptr_access(struct wlr_buffer *wlr_buffer) {
     struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
     if (buffer->data) {
-        buffer->unlock();
+        buffer->termuxdc_buffer_ptr->end_draw();
         buffer->data = NULL;
     }
 }
@@ -107,26 +107,25 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     if (buffer == NULL) {
         return NULL;
     }
+    
     wlr_buffer_init(&buffer->wlr_buffer, &buffer_impl, width, height);
 
-    int ret = display_client_init(width,height,4);
-    if (ret!=TERMUX_DC_OK){
-        goto fail;
-    }
-    buffer->lock = begin_display_draw;
-    buffer->unlock = end_display_draw;
+    // int ret = display_client_init(width,height,4);
+    // if (ret!=TERMUX_DC_OK){
+        // goto fail;
+    // }
 
+    struct termuxdc_buffer *termuxdc_buffer_ptr = get_termuxdc_buffer();
+    wlr_log(WLR_INFO, "Temux DC get_termuxdc_buffer");
+    buffer->termuxdc_buffer_ptr = termuxdc_buffer_ptr;
 
     wlr_log(WLR_DEBUG, "Created termuxdc_hardware_buffer %dx%d", width, height);
     
-
-    struct termuxdc_buffer *termux_buffer_ptr = get_termuxdc_buffer();
-    
-    const native_handle_t *handle = get_native_handler();
+    const termuxdc_native_handle_t *handle = get_native_handler();
     int fd = -1;
     for (int i = 0; i < handle->numFds; i++) {
         size_t size = lseek(handle->data[i], 0, SEEK_END);
-        if (size < (termux_buffer_ptr->desc.stride * termux_buffer_ptr->desc.height * 4))
+        if (size < (termuxdc_buffer_ptr->desc.stride * termuxdc_buffer_ptr->desc.height * 4))
             continue;
 
         fd = fcntl(handle->data[i], F_DUPFD_CLOEXEC, 0);
@@ -144,12 +143,12 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
         .format = format->format,
         .modifier = DRM_FORMAT_MOD_LINEAR,
         .offset[0] = 0,
-        .stride[0] = termux_buffer_ptr->desc.stride * 4,
+        .stride[0] = termuxdc_buffer_ptr->desc.stride * 4,
         .fd[0] = fd,
 
     };
 
-    buffer->format = format->format;
+    buffer->termuxdc_buffer_ptr->format = format->format;
     return &buffer->wlr_buffer;
 
 fail:

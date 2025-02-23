@@ -46,7 +46,7 @@ static void backend_destroy(struct wlr_backend *wlr_backend) {
     wlr_backend_finish(wlr_backend);
 
     pthread_join(backend->input_event_thread, NULL);
-    wlr_queue_destroy(&backend->event_queue);
+    termuxdc_wlr_queue_destroy(&backend->event_queue);
 
     close(backend->input_event_fd);
     free(backend);
@@ -83,7 +83,7 @@ static int handle_termuxdc_event(int fd, uint32_t mask, void *data) {
         return 0;
     }
 
-    struct wl_list *elm = wlr_queue_pull(&backend->event_queue, true);
+    struct wl_list *elm = termuxdc_wlr_queue_pull(&backend->event_queue, true);
     if (elm == NULL) {
         wlr_log(WLR_ERROR, "termuxdc event queue is empty");
         return 0;
@@ -111,7 +111,7 @@ static void *termuxdc_event_thread(void *data) {
         if (wlr_event) {
             memcpy(&wlr_event->e, &event, sizeof(termuxdc_event));
 
-            wlr_queue_push(&backend->event_queue, &wlr_event->link);
+            termuxdc_wlr_queue_push(&backend->event_queue, &wlr_event->link);
 
             eventfd_write(backend->input_event_fd, 1);
         } else {
@@ -158,7 +158,7 @@ struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
     backend->input_event_source = wl_event_loop_add_fd(backend->loop, backend->input_event_fd,
                                                       events, handle_termuxdc_event, backend);
 
-    wlr_queue_init(&backend->event_queue);
+    termuxdc_wlr_queue_init(&backend->event_queue);
     pthread_create(&backend->input_event_thread, NULL, termuxdc_event_thread, backend);
 
     return &backend->backend;

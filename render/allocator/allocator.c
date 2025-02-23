@@ -18,9 +18,10 @@
 #include "render/allocator/gbm.h"
 #endif
 
-#if WLR_HAS_TERMUXGUI_BACKEND
+#if WLR_HAS_TERMUXGUI_BACKEND || WLR_HAS_TERMUXDC_BACKEND
 #include "backend/multi.h"
 #include "backend/termuxgui.h"
+#include "backend/termuxdc.h"
 #endif
 
 void wlr_allocator_init(struct wlr_allocator *alloc,
@@ -150,19 +151,22 @@ struct wlr_allocator *allocator_autocreate_with_drm_fd(
 	return NULL;
 }
 
-#if WLR_HAS_TERMUXGUI_BACKEND
+#if WLR_HAS_TERMUXGUI_BACKEND || WLR_HAS_TERMUXDC_BACKEND
 static void backend_get_allocator(struct wlr_backend *backend, void *data) {
 	struct wlr_allocator **allocator = data;
 	if (wlr_backend_is_tgui(backend)) {
 		struct wlr_tgui_backend *tgui_backend = tgui_backend_from_backend(backend);
 		*allocator = wlr_tgui_backend_get_allocator(tgui_backend);
+	}else if (wlr_backend_is_termuxdc(backend)) {
+		struct wlr_termuxdc_backend *termuxdc_backend_ptr = termuxdc_backend_from_backend(backend);
+		*allocator = wlr_termuxdc_backend_get_allocator(termuxdc_backend_ptr);
 	}
 }
 #endif
 
 struct wlr_allocator *wlr_allocator_autocreate(struct wlr_backend *backend,
 		struct wlr_renderer *renderer) {
-#if WLR_HAS_TERMUXGUI_BACKEND
+#if WLR_HAS_TERMUXGUI_BACKEND || WLR_HAS_TERMUXDC_BACKEND
 	struct wlr_allocator *allocator = NULL;
 	if (wlr_backend_is_multi(backend)) {
 		wlr_multi_for_each_backend(backend, backend_get_allocator, &allocator);

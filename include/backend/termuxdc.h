@@ -20,26 +20,26 @@
 #define DEFAULT_REFRESH (60 * 1000) // 60 Hz
 
 
-struct wlr_queue {
+struct termuxdc_wlr_queue {
     struct wl_list base;
     int length;
     pthread_cond_t cond;
     pthread_mutex_t mutex;
 };
 
-static inline void wlr_queue_init(struct wlr_queue *queue) {
+static inline void termuxdc_wlr_queue_init(struct termuxdc_wlr_queue *queue) {
     queue->length = 0;
     wl_list_init(&queue->base);
     pthread_cond_init(&queue->cond, NULL);
     pthread_mutex_init(&queue->mutex, NULL);
 }
 
-static inline void wlr_queue_destroy(struct wlr_queue *queue) {
+static inline void termuxdc_wlr_queue_destroy(struct termuxdc_wlr_queue *queue) {
     pthread_cond_destroy(&queue->cond);
     pthread_mutex_destroy(&queue->mutex);
 }
 
-static inline struct wl_list *wlr_queue_pull(struct wlr_queue *queue, bool nonblock) {
+static inline struct wl_list *termuxdc_wlr_queue_pull(struct termuxdc_wlr_queue *queue, bool nonblock) {
     pthread_mutex_lock(&queue->mutex);
 
     if (queue->length == 0) {
@@ -59,7 +59,7 @@ static inline struct wl_list *wlr_queue_pull(struct wlr_queue *queue, bool nonbl
     return elm;
 }
 
-static inline void wlr_queue_push(struct wlr_queue *queue, struct wl_list *elm) {
+static inline void termuxdc_wlr_queue_push(struct termuxdc_wlr_queue *queue, struct wl_list *elm) {
     pthread_mutex_lock(&queue->mutex);
     if (wl_list_empty(&queue->base)) {
         pthread_cond_signal(&queue->cond);
@@ -69,7 +69,7 @@ static inline void wlr_queue_push(struct wlr_queue *queue, struct wl_list *elm) 
     pthread_mutex_unlock(&queue->mutex);
 }
 
-static inline int wlr_queue_length(struct wlr_queue *queue) {
+static inline int termuxdc_wlr_queue_length(struct termuxdc_wlr_queue *queue) {
     pthread_mutex_lock(&queue->mutex);
     int ret = queue->length;
     pthread_mutex_unlock(&queue->mutex);
@@ -90,7 +90,7 @@ struct wlr_termuxdc_backend {
     bool started;
 
     
-    struct wlr_queue event_queue;
+    struct termuxdc_wlr_queue event_queue;
     int input_event_fd;
     pthread_t input_event_thread;
     struct wl_event_source *input_event_source;
@@ -103,14 +103,11 @@ struct wlr_termuxdc_allocator {
 
 struct wlr_termuxdc_buffer {
     struct wlr_buffer wlr_buffer;
+    struct termuxdc_buffer *termuxdc_buffer_ptr;
 
     void *data;
-    uint32_t format;
     struct wl_list link;
     struct wlr_dmabuf_attributes dmabuf;
-
-    int (*lock)(void **outVirtualAddress);
-    int (*unlock)();
 };
 
 struct wlr_termuxdc_output {
@@ -121,8 +118,8 @@ struct wlr_termuxdc_output {
 
     bool foreground;
 
-    struct wlr_queue present_queue;
-    struct wlr_queue idle_queue;
+    struct termuxdc_wlr_queue present_queue;
+    struct termuxdc_wlr_queue idle_queue;
     bool present_thread_run;
     pthread_t present_thread;
     int present_complete_fd;

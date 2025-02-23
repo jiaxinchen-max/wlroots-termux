@@ -52,7 +52,7 @@ static bool output_commit(struct wlr_output *wlr_output, const struct wlr_output
     if (state->committed & WLR_OUTPUT_STATE_BUFFER) {
         struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(state->buffer);
         wlr_buffer_lock(&buffer->wlr_buffer);
-        wlr_queue_push(&output->present_queue, &buffer->link);
+        termuxdc_wlr_queue_push(&output->present_queue, &buffer->link);
     }
 
     return true;
@@ -68,17 +68,17 @@ static void output_destroy(struct wlr_output *wlr_output) {
 
 
     struct wl_list tmp_buffer, *tmp;
-    wlr_queue_push(&output->present_queue, &tmp_buffer);
+    termuxdc_wlr_queue_push(&output->present_queue, &tmp_buffer);
     pthread_join(output->present_thread, NULL);
 
-    while ((tmp = wlr_queue_pull(&output->present_queue, true)) != NULL) {
+    while ((tmp = termuxdc_wlr_queue_pull(&output->present_queue, true)) != NULL) {
         if (tmp == &tmp_buffer) {
             continue;
         }
         struct wlr_termuxdc_buffer *buf = wl_container_of(tmp, buf, link);
         wlr_buffer_unlock(&buf->wlr_buffer);
     }
-    while ((tmp = wlr_queue_pull(&output->idle_queue, true)) != NULL) {
+    while ((tmp = termuxdc_wlr_queue_pull(&output->idle_queue, true)) != NULL) {
         if (tmp == &tmp_buffer) {
             continue;
         }
@@ -86,8 +86,8 @@ static void output_destroy(struct wlr_output *wlr_output) {
         wlr_buffer_unlock(&buf->wlr_buffer);
     }
     display_destroy();
-    wlr_queue_destroy(&output->present_queue);
-    wlr_queue_destroy(&output->idle_queue);
+    termuxdc_wlr_queue_destroy(&output->present_queue);
+    termuxdc_wlr_queue_destroy(&output->idle_queue);
     free(output);
 }
 
@@ -132,12 +132,12 @@ int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *
     case EVENT_FRAME_COMPLETE: {
         bool redraw = false;
 
-        if (wlr_queue_length(&output->idle_queue) > 0) {
-            struct wl_list *elm = wlr_queue_pull(&output->idle_queue, true);
+        if (termuxdc_wlr_queue_length(&output->idle_queue) > 0) {
+            struct wl_list *elm = termuxdc_wlr_queue_pull(&output->idle_queue, true);
             struct wlr_termuxdc_buffer *buf = wl_container_of(elm, buf, link);
             wlr_buffer_unlock(&buf->wlr_buffer);
             redraw = true;
-        } else if (wlr_queue_length(&output->present_queue) < WLR_SWAPCHAIN_CAP - 1) {
+        } else if (termuxdc_wlr_queue_length(&output->present_queue) < WLR_SWAPCHAIN_CAP - 1) {
             redraw = true;
         }
 
@@ -158,17 +158,17 @@ static void *present_queue_thread(void *data) {
     output->present_thread_run = true;
 
     while (output->present_thread_run) {
-        struct wl_list *elm = wlr_queue_pull(&output->present_queue, false);
+        struct wl_list *elm = termuxdc_wlr_queue_pull(&output->present_queue, false);
         struct wlr_termuxdc_buffer *buffer = wl_container_of(elm, buffer, link);
 
         if (!output->present_thread_run) {
-            wlr_queue_push(&output->idle_queue, &buffer->link);
+            termuxdc_wlr_queue_push(&output->idle_queue, &buffer->link);
             break;
         }
 
        usleep(1000000000 / DEFAULT_REFRESH);
 
-        wlr_queue_push(&output->idle_queue, &buffer->link);
+        termuxdc_wlr_queue_push(&output->idle_queue, &buffer->link);
 
         eventfd_write(output->present_complete_fd, 1);
     }
@@ -227,7 +227,11 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     //     return NULL;
     // }
 
-    // display_client_init(1920,1080,4);
+    int ret = display_client_init(1920,1080,4);
+    if (ret!=TERMUX_DC_OK){
+        wlr_log(WLR_ERROR, "Failed to init display client");
+    }
+
 
     struct wlr_output_state state;
     wlr_output_state_init(&state);
@@ -255,8 +259,8 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
 
     assert(output->present_complete_fd >= 0 && output->present_complete_source != NULL);
 
-    wlr_queue_init(&output->present_queue);
-    wlr_queue_init(&output->idle_queue);
+    termuxdc_wlr_queue_init(&output->present_queue);
+    termuxdc_wlr_queue_init(&output->idle_queue);
 
     pthread_create(&output->present_thread, NULL, present_queue_thread, output);
 
