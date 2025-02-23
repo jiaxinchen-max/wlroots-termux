@@ -112,7 +112,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
 
     // int ret = display_client_init(width,height,4);
     // if (ret!=TERMUX_DC_OK){
-        // goto fail;
+    //     goto fail;
     // }
 
     struct termuxdc_buffer *termuxdc_buffer_ptr = get_termuxdc_buffer();
@@ -122,9 +122,11 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     wlr_log(WLR_DEBUG, "Created termuxdc_hardware_buffer %dx%d", width, height);
     
     const termuxdc_native_handle_t *handle = get_native_handler();
+    wlr_log(WLR_DEBUG, "termuxdc_native_handle_t version=%d,numFds=%d,numInts=%d", handle->version, handle->numFds,handle->numInts);
     int fd = -1;
     for (int i = 0; i < handle->numFds; i++) {
         size_t size = lseek(handle->data[i], 0, SEEK_END);
+        wlr_log(WLR_DEBUG, "handle->data[%d]:%d",i, handle->data[i]);
         if (size < (termuxdc_buffer_ptr->desc.stride * termuxdc_buffer_ptr->desc.height * 4))
             continue;
 
