@@ -274,7 +274,7 @@ static struct wlr_backend *attempt_termuxdc_backend(struct wl_event_loop *loop) 
 		return NULL;
 	}
 
-	size_t outputs = parse_outputs_env("WLR_termuxdc_OUTPUTS");
+	size_t outputs = parse_outputs_env("WLR_TERMUXDC_OUTPUTS");
 	for (size_t i = 0; i < outputs; ++i) {
 		wlr_termuxdc_output_create(backend);
 	}
