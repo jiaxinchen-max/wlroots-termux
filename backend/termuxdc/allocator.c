@@ -156,6 +156,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     };
 
     buffer->termuxdc_buffer_ptr->format = format->format;
+    wlr_log(WLR_DEBUG, "success to allocator_create_buffer");
     return &buffer->wlr_buffer;
 
 fail:
