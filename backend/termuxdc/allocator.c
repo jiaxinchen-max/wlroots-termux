@@ -41,6 +41,10 @@ static void buffer_destroy(struct wlr_buffer *wlr_buffer) {
 static bool buffer_get_dmabuf(struct wlr_buffer *wlr_buffer,
                               struct wlr_dmabuf_attributes *dmabuf) {
     struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
+    if (!buffer){
+        wlr_log(WLR_ERROR, "buffer_get_dmabuf failed");
+        return false;
+    }
     memcpy(dmabuf, &buffer->dmabuf, sizeof(*dmabuf));
     return true;
 }
@@ -61,7 +65,7 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
     }
 
     *data = buffer->data;
-    *format = buffer->termuxdc_buffer_ptr->format;
+    *format = buffer->termuxdc_buffer_ptr->format;∏
     *stride = buffer->termuxdc_buffer_ptr->desc.stride;
     return true;
 }
