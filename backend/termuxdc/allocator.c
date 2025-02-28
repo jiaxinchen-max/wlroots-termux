@@ -142,6 +142,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
         wlr_log(WLR_ERROR, "Failed to get dmabuf");
         goto fail;
     }
+    wlr_log(WLR_DEBUG, "success to get dmabuf");
     buffer->dmabuf = (struct wlr_dmabuf_attributes) {
         .width = width,
         .height = height,
