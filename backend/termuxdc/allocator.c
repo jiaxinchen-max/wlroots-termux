@@ -121,7 +121,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
 
     struct termuxdc_buffer *termuxdc_buffer_ptr = get_termuxdc_buffer();
     wlr_log(WLR_INFO, "Temux DC get_termuxdc_buffer");
-    // buffer->termuxdc_buffer_ptr = termuxdc_buffer_ptr;
+    buffer->termuxdc_buffer_ptr = termuxdc_buffer_ptr;
 
     wlr_log(WLR_DEBUG, "Created termuxdc_hardware_buffer %dx%d", width, height);
     
