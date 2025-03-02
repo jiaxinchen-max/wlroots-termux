@@ -146,8 +146,8 @@ struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
 
     backend->allocator = wlr_termuxdc_allocator_create(backend);
 
-    wlr_pointer_init(&backend->pointer, &termuxdc_pointer_impl, "termuxdc-pointer");
-    wlr_keyboard_init(&backend->keyboard, &termuxdc_keyboard_impl, "termuxdc-keyboard");
+    /*wlr_pointer_init(&backend->pointer, &termuxdc_pointer_impl, "termuxdc-pointer");
+    wlr_keyboard_init(&backend->keyboard, &termuxdc_keyboard_impl, "termuxdc-keyboard");*/
 
     wl_list_init(&backend->outputs);
 
@@ -155,11 +155,11 @@ struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
     wl_event_loop_add_destroy_listener(loop, &backend->event_loop_destroy);
 
     uint32_t events = WL_EVENT_READABLE | WL_EVENT_ERROR | WL_EVENT_HANGUP;
-    backend->input_event_source = wl_event_loop_add_fd(backend->loop, backend->input_event_fd,
-                                                      events, handle_termuxdc_event, backend);
+    // backend->input_event_source = wl_event_loop_add_fd(backend->loop, backend->input_event_fd,
+                                                    //   events, handle_termuxdc_event, backend);
 
-    termuxdc_wlr_queue_init(&backend->event_queue);
-    pthread_create(&backend->input_event_thread, NULL, termuxdc_event_thread, backend);
+    // termuxdc_wlr_queue_init(&backend->event_queue);
+    // pthread_create(&backend->input_event_thread, NULL, termuxdc_event_thread, backend);
 
     return &backend->backend;
 }
