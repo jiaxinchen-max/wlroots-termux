@@ -218,7 +218,6 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
         wlr_log(WLR_ERROR, "Failed to allocate wlr_termuxdc_output");
         return NULL;
     }
-    wlr_log(WLR_DEBUG, "Scuuess to allocate wlr_termuxdc_output");
     output->backend = backend;
 
     // if (tdc_activity_create(backend->conn, &output->activity, TGUI_ACTIVITY_NORMAL, NULL,
@@ -232,7 +231,6 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     if (ret!=TERMUX_DC_OK){
         wlr_log(WLR_ERROR, "Failed to init display client");
     }
-    wlr_log(WLR_DEBUG, "Success to init display client");
 
     struct wlr_output_state state;
     wlr_output_state_init(&state);
@@ -252,7 +250,6 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     char description[128];
     snprintf(description, sizeof(description), "Termux:Display client output %zu", output_num);
     wlr_output_set_description(wlr_output, description);
-    wlr_log(WLR_DEBUG, "Scuuess to set_description %s", description);
 
     uint32_t events = WL_EVENT_READABLE | WL_EVENT_ERROR | WL_EVENT_HANGUP;
     output->present_complete_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE);
@@ -266,8 +263,8 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
 
     pthread_create(&output->present_thread, NULL, present_queue_thread, output);
 
-    // wl_signal_emit_mutable(&backend->backend.events.new_output, wlr_output);
-    // wlr_log(WLR_DEBUG, "Scuuess to wl signal emit mutable");
+    wl_signal_emit_mutable(&backend->backend.events.new_output, wlr_output);
+    wlr_log(WLR_DEBUG, "Scuuess to wl signal emit mutable");
 
     wl_list_insert(&backend->outputs, &output->link);
     wlr_log(WLR_DEBUG, "Scuuess to wlr_termuxdc_output_create");
