@@ -218,6 +218,7 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
         wlr_log(WLR_ERROR, "Failed to allocate wlr_termuxdc_output");
         return NULL;
     }
+    wlr_log(WLR_DEBUG, "Scuuess to allocate wlr_termuxdc_output");
     output->backend = backend;
 
     // if (tdc_activity_create(backend->conn, &output->activity, TGUI_ACTIVITY_NORMAL, NULL,
@@ -231,7 +232,7 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     if (ret!=TERMUX_DC_OK){
         wlr_log(WLR_ERROR, "Failed to init display client");
     }
-
+    wlr_log(WLR_DEBUG, "Success to init display client");
 
     struct wlr_output_state state;
     wlr_output_state_init(&state);
