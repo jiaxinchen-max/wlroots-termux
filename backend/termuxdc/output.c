@@ -260,10 +260,10 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
         backend->loop, output->present_complete_fd, events, present_complete, output);
 
     assert(output->present_complete_fd >= 0 && output->present_complete_source != NULL);
-    wlr_log(WLR_DEBUG, "Scuuess to add present complete fd");
 
     termuxdc_wlr_queue_init(&output->present_queue);
     termuxdc_wlr_queue_init(&output->idle_queue);
+    wlr_log(WLR_DEBUG, "Scuuess to termuxdc wlr queue init");
 
     pthread_create(&output->present_thread, NULL, present_queue_thread, output);
 
