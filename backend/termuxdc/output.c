@@ -242,7 +242,6 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     wlr_output_init(&output->wlr_output, &backend->backend, &output_impl, backend->loop,
                     &state);
     wlr_output_state_finish(&state);
-    wlr_log(WLR_DEBUG, "Scuuess to output_state_finish");
 
     struct wlr_output *wlr_output = &output->wlr_output;
     wlr_output->adaptive_sync_status = WLR_OUTPUT_ADAPTIVE_SYNC_ENABLED;
@@ -261,6 +260,7 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
         backend->loop, output->present_complete_fd, events, present_complete, output);
 
     assert(output->present_complete_fd >= 0 && output->present_complete_source != NULL);
+    wlr_log(WLR_DEBUG, "Scuuess to add present complete fd");
 
     termuxdc_wlr_queue_init(&output->present_queue);
     termuxdc_wlr_queue_init(&output->idle_queue);
