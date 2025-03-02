@@ -54,28 +54,28 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
                                   void **data,
                                   uint32_t *format,
                                   size_t *stride) {
-    struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
+    // struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
 
-    if (buffer->data == NULL) {
-        buffer->termuxdc_buffer_ptr->begin_draw(&buffer->data);
-        if (buffer->data == NULL) {
-            wlr_log(WLR_ERROR, "AHardwareBuffer_lock failed");
-            return false;
-        }
-    }
+    // if (buffer->data == NULL) {
+    //     buffer->termuxdc_buffer_ptr->begin_draw(&buffer->data);
+    //     if (buffer->data == NULL) {
+    //         wlr_log(WLR_ERROR, "AHardwareBuffer_lock failed");
+    //         return false;
+    //     }
+    // }
 
-    *data = buffer->data;
-    *format = buffer->termuxdc_buffer_ptr->format;
-    *stride = buffer->termuxdc_buffer_ptr->desc.stride;
+    // *data = buffer->data;
+    // *format = buffer->termuxdc_buffer_ptr->format;
+    // *stride = buffer->termuxdc_buffer_ptr->desc.stride;
     return true;
 }
 
 static void end_data_ptr_access(struct wlr_buffer *wlr_buffer) {
-    struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
-    if (buffer->data) {
-        buffer->termuxdc_buffer_ptr->end_draw();
-        buffer->data = NULL;
-    }
+    // struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
+    // if (buffer->data) {
+    //     buffer->termuxdc_buffer_ptr->end_draw();
+    //     buffer->data = NULL;
+    // }
 }
 
 static const struct wlr_buffer_impl buffer_impl = {
