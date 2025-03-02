@@ -153,28 +153,28 @@ int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *
     return 0;
 }
 
-// static void *present_queue_thread(void *data) {
-//     struct wlr_termuxdc_output *output = data;
-//     output->present_thread_run = true;
+static void *present_queue_thread(void *data) {
+    struct wlr_termuxdc_output *output = data;
+    output->present_thread_run = true;
 
-//     while (output->present_thread_run) {
-//         struct wl_list *elm = termuxdc_wlr_queue_pull(&output->present_queue, false);
-//         struct wlr_termuxdc_buffer *buffer = wl_container_of(elm, buffer, link);
+    while (output->present_thread_run) {
+        struct wl_list *elm = termuxdc_wlr_queue_pull(&output->present_queue, false);
+        struct wlr_termuxdc_buffer *buffer = wl_container_of(elm, buffer, link);
 
-//         if (!output->present_thread_run) {
-//             termuxdc_wlr_queue_push(&output->idle_queue, &buffer->link);
-//             break;
-//         }
+        if (!output->present_thread_run) {
+            termuxdc_wlr_queue_push(&output->idle_queue, &buffer->link);
+            break;
+        }
 
-//        usleep(1000000000 / DEFAULT_REFRESH);
+       usleep(1000000000 / DEFAULT_REFRESH);
 
-//         termuxdc_wlr_queue_push(&output->idle_queue, &buffer->link);
+        termuxdc_wlr_queue_push(&output->idle_queue, &buffer->link);
 
-//         eventfd_write(output->present_complete_fd, 1);
-//     }
+        eventfd_write(output->present_complete_fd, 1);
+    }
 
-//     return 0;
-// }
+    return 0;
+}
 
 static int present_complete(int fd, uint32_t mask, void *data) {
     struct wlr_termuxdc_output *output = data;
@@ -242,6 +242,7 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     wlr_output_init(&output->wlr_output, &backend->backend, &output_impl, backend->loop,
                     &state);
     wlr_output_state_finish(&state);
+    wlr_log(WLR_DEBUG, "Scuuess to output_state_finish");
 
     struct wlr_output *wlr_output = &output->wlr_output;
     wlr_output->adaptive_sync_status = WLR_OUTPUT_ADAPTIVE_SYNC_ENABLED;
@@ -264,7 +265,7 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     termuxdc_wlr_queue_init(&output->present_queue);
     termuxdc_wlr_queue_init(&output->idle_queue);
 
-    // pthread_create(&output->present_thread, NULL, present_queue_thread, output);
+    pthread_create(&output->present_thread, NULL, present_queue_thread, output);
 
     wl_signal_emit_mutable(&backend->backend.events.new_output, wlr_output);
 
