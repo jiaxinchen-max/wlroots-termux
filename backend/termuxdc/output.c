@@ -268,5 +268,6 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     wl_signal_emit_mutable(&backend->backend.events.new_output, wlr_output);
 
     wl_list_insert(&backend->outputs, &output->link);
+    wlr_log(WLR_DEBUG, "Scuuess to wlr_termuxdc_output_create");
     return wlr_output;
 }
