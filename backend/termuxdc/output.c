@@ -153,28 +153,28 @@ int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *
     return 0;
 }
 
-static void *present_queue_thread(void *data) {
-    struct wlr_termuxdc_output *output = data;
-    output->present_thread_run = true;
+// static void *present_queue_thread(void *data) {
+//     struct wlr_termuxdc_output *output = data;
+//     output->present_thread_run = true;
 
-    while (output->present_thread_run) {
-        struct wl_list *elm = termuxdc_wlr_queue_pull(&output->present_queue, false);
-        struct wlr_termuxdc_buffer *buffer = wl_container_of(elm, buffer, link);
+//     while (output->present_thread_run) {
+//         struct wl_list *elm = termuxdc_wlr_queue_pull(&output->present_queue, false);
+//         struct wlr_termuxdc_buffer *buffer = wl_container_of(elm, buffer, link);
 
-        if (!output->present_thread_run) {
-            termuxdc_wlr_queue_push(&output->idle_queue, &buffer->link);
-            break;
-        }
+//         if (!output->present_thread_run) {
+//             termuxdc_wlr_queue_push(&output->idle_queue, &buffer->link);
+//             break;
+//         }
 
-       usleep(1000000000 / DEFAULT_REFRESH);
+//        usleep(1000000000 / DEFAULT_REFRESH);
 
-        termuxdc_wlr_queue_push(&output->idle_queue, &buffer->link);
+//         termuxdc_wlr_queue_push(&output->idle_queue, &buffer->link);
 
-        eventfd_write(output->present_complete_fd, 1);
-    }
+//         eventfd_write(output->present_complete_fd, 1);
+//     }
 
-    return 0;
-}
+//     return 0;
+// }
 
 static int present_complete(int fd, uint32_t mask, void *data) {
     struct wlr_termuxdc_output *output = data;
