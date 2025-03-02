@@ -147,7 +147,7 @@ struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
     backend->allocator = wlr_termuxdc_allocator_create(backend);
 
     wlr_pointer_init(&backend->pointer, &termuxdc_pointer_impl, "termuxdc-pointer");
-    // wlr_keyboard_init(&backend->keyboard, &termuxdc_keyboard_impl, "termuxdc-keyboard");
+    wlr_keyboard_init(&backend->keyboard, &termuxdc_keyboard_impl, "termuxdc-keyboard");
 
     wl_list_init(&backend->outputs);
 
