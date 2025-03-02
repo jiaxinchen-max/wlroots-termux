@@ -73,6 +73,7 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
 static void end_data_ptr_access(struct wlr_buffer *wlr_buffer) {
     struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
     if (buffer->data) {
+        buffer->termuxdc_buffer_ptr->begin_draw(&buffer->data);
         buffer->termuxdc_buffer_ptr->end_draw();
         buffer->data = NULL;
     }
