@@ -252,6 +252,7 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     char description[128];
     snprintf(description, sizeof(description), "Termux:Display client output %zu", output_num);
     wlr_output_set_description(wlr_output, description);
+    wlr_log(WLR_DEBUG, "Scuuess to set_description %s", description);
 
     uint32_t events = WL_EVENT_READABLE | WL_EVENT_ERROR | WL_EVENT_HANGUP;
     output->present_complete_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE);
