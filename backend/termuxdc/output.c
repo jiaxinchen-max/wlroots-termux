@@ -263,9 +263,9 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
 
     termuxdc_wlr_queue_init(&output->present_queue);
     termuxdc_wlr_queue_init(&output->idle_queue);
-    wlr_log(WLR_DEBUG, "Scuuess to termuxdc wlr queue init");
 
     pthread_create(&output->present_thread, NULL, present_queue_thread, output);
+    wlr_log(WLR_DEBUG, "Scuuess to present queue thread");
 
     wl_signal_emit_mutable(&backend->backend.events.new_output, wlr_output);
 
