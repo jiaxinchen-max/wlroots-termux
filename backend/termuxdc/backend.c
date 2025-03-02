@@ -154,7 +154,7 @@ struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
     backend->event_loop_destroy.notify = handle_event_loop_destroy;
     wl_event_loop_add_destroy_listener(loop, &backend->event_loop_destroy);
 
-    uint32_t events = WL_EVENT_READABLE | WL_EVENT_ERROR | WL_EVENT_HANGUP;
+    // uint32_t events = WL_EVENT_READABLE | WL_EVENT_ERROR | WL_EVENT_HANGUP;
     // backend->input_event_source = wl_event_loop_add_fd(backend->loop, backend->input_event_fd,
                                                     //   events, handle_termuxdc_event, backend);
 
