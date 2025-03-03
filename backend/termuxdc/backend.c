@@ -67,61 +67,61 @@ static void handle_event_loop_destroy(struct wl_listener *listener, void *data) 
     backend_destroy(&backend->backend);
 }
 
-// static int handle_termuxdc_event(int fd, uint32_t mask, void *data) {
-//     struct wlr_termuxdc_backend *backend = data;
+static int handle_termuxdc_event(int fd, uint32_t mask, void *data) {
+    struct wlr_termuxdc_backend *backend = data;
 
-//     if ((mask & WL_EVENT_HANGUP) || (mask & WL_EVENT_ERROR)) {
-//         if (mask & WL_EVENT_ERROR) {
-//             wlr_log(WLR_ERROR, "Failed to read from termuxdc event");
-//             wlr_backend_destroy(&backend->backend);
-//         }
-//         return 0;
-//     }
+    if ((mask & WL_EVENT_HANGUP) || (mask & WL_EVENT_ERROR)) {
+        if (mask & WL_EVENT_ERROR) {
+            wlr_log(WLR_ERROR, "Failed to read from termuxdc event");
+            wlr_backend_destroy(&backend->backend);
+        }
+        return 0;
+    }
 
-//     eventfd_t event_count = 0;
-//     if (eventfd_read(backend->input_event_fd, &event_count) < 0) {
-//         return 0;
-//     }
+    eventfd_t event_count = 0;
+    if (eventfd_read(backend->input_event_fd, &event_count) < 0) {
+        return 0;
+    }
 
-//     struct wl_list *elm = termuxdc_wlr_queue_pull(&backend->event_queue, true);
-//     if (elm == NULL) {
-//         wlr_log(WLR_ERROR, "termuxdc event queue is empty");
-//         return 0;
-//     }
-//     struct wlr_termuxdc_event *event = wl_container_of(elm, event, link);
+    struct wl_list *elm = termuxdc_wlr_queue_pull(&backend->event_queue, true);
+    if (elm == NULL) {
+        wlr_log(WLR_ERROR, "termuxdc event queue is empty");
+        return 0;
+    }
+    struct wlr_termuxdc_event *event = wl_container_of(elm, event, link);
 
-//     struct wlr_termuxdc_output *output, *output_tmp;
-//     wl_list_for_each_safe(output, output_tmp, &backend->outputs, link) {
-//         // if (event->e.activity == output->activity) {
-//             handle_termuxdc_server_event(&event->e, output);
-//         // }
-//     }
-//     // termuxdc_event_destroy(&event->e);
-//     free(event);
+    struct wlr_termuxdc_output *output, *output_tmp;
+    wl_list_for_each_safe(output, output_tmp, &backend->outputs, link) {
+        // if (event->e.activity == output->activity) {
+            handle_termuxdc_server_event(&event->e, output);
+        // }
+    }
+    // termuxdc_event_destroy(&event->e);
+    free(event);
 
-//     return 0;
-// }
+    return 0;
+}
 
-// static void *termuxdc_event_thread(void *data) {
-//     struct wlr_termuxdc_backend *backend = data;
+static void *termuxdc_event_thread(void *data) {
+    struct wlr_termuxdc_backend *backend = data;
 
-//     termuxdc_event event;
-//     while (event_wait(&event) == TERMUX_DC_OK) {
-//         struct wlr_termuxdc_event *wlr_event = calloc(1, sizeof(*wlr_event));
-//         if (wlr_event) {
-//             memcpy(&wlr_event->e, &event, sizeof(termuxdc_event));
+    termuxdc_event event;
+    while (event_wait(&event) == TERMUX_DC_OK) {
+        struct wlr_termuxdc_event *wlr_event = calloc(1, sizeof(*wlr_event));
+        if (wlr_event) {
+            memcpy(&wlr_event->e, &event, sizeof(termuxdc_event));
 
-//             termuxdc_wlr_queue_push(&backend->event_queue, &wlr_event->link);
+            termuxdc_wlr_queue_push(&backend->event_queue, &wlr_event->link);
 
-//             eventfd_write(backend->input_event_fd, 1);
-//         } else {
-//             wlr_log(WLR_ERROR, "termuxdc event loss: out of memory");
-//             // termuxdc_event_destroy(&event);
-//         }
-//     }
+            eventfd_write(backend->input_event_fd, 1);
+        } else {
+            wlr_log(WLR_ERROR, "termuxdc event loss: out of memory");
+            // termuxdc_event_destroy(&event);
+        }
+    }
 
-//     return 0;
-// }
+    return 0;
+}
 
 const struct wlr_pointer_impl termuxdc_pointer_impl = {
     .name = "termuxdc-pointer",
@@ -154,12 +154,12 @@ struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
     backend->event_loop_destroy.notify = handle_event_loop_destroy;
     wl_event_loop_add_destroy_listener(loop, &backend->event_loop_destroy);
 
-    // uint32_t events = WL_EVENT_READABLE | WL_EVENT_ERROR | WL_EVENT_HANGUP;
-    // backend->input_event_source = wl_event_loop_add_fd(backend->loop, backend->input_event_fd,
-                                                    //   events, handle_termuxdc_event, backend);
+    uint32_t events = WL_EVENT_READABLE | WL_EVENT_ERROR | WL_EVENT_HANGUP;
+    backend->input_event_source = wl_event_loop_add_fd(backend->loop, backend->input_event_fd,
+                                                      events, handle_termuxdc_event, backend);
 
-    // termuxdc_wlr_queue_init(&backend->event_queue);
-    // pthread_create(&backend->input_event_thread, NULL, termuxdc_event_thread, backend);
+    termuxdc_wlr_queue_init(&backend->event_queue);
+    pthread_create(&backend->input_event_thread, NULL, termuxdc_event_thread, backend);
 
     return &backend->backend;
 }
