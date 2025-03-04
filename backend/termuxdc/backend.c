@@ -17,8 +17,8 @@ static bool backend_start(struct wlr_backend *wlr_backend) {
     backend->started = true;
     wlr_log(WLR_INFO, "Starting Termux:Display client backend");
 
-    wl_signal_emit_mutable(&backend->backend.events.new_input, &backend->keyboard.base);
-    wl_signal_emit_mutable(&backend->backend.events.new_input, &backend->pointer.base);
+    // wl_signal_emit_mutable(&backend->backend.events.new_input, &backend->keyboard.base);
+    // wl_signal_emit_mutable(&backend->backend.events.new_input, &backend->pointer.base);
 
     for (uint32_t i = 0; i < backend->requested_outputs; i++) {
         wlr_termuxdc_output_create(&backend->backend);
