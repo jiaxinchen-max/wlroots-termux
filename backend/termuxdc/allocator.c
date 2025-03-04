@@ -134,6 +134,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
         goto fail;
     }
     wlr_log(WLR_DEBUG, "termuxdc_native_handle_t version=%d,numFds=%d,numInts=%d", handle->version, handle->numFds,handle->numInts);
+    buffer->termuxdc_buffer_ptr->describe(buffer->termuxdc_buffer_ptr->buffer, &buffer->termuxdc_buffer_ptr->desc);
     int fd = -1;
     for (int i = 0; i < handle->numFds; i++) {
         size_t size = lseek(handle->data[i], 0, SEEK_END);
