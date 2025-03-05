@@ -247,6 +247,10 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
 
     size_t output_num = ++last_output_num;
 
+    char name[64];
+    snprintf(name, sizeof(name), "TDC-%zu", output_num);
+    wlr_output_set_name(wlr_output, name);
+
     char description[128];
     snprintf(description, sizeof(description), "Termux:Display client output %zu", output_num);
     wlr_output_set_description(wlr_output, description);
