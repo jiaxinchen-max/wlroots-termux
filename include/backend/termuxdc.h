@@ -151,7 +151,7 @@ struct wlr_termuxdc_buffer *termuxdc_buffer_from_buffer(struct wlr_buffer *wlr_b
 
 int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *output);
 
-int handle_termuxdc_timer_event(struct wlr_termuxdc_output *output);
+int handle_termuxdc_server_timer_event(struct wlr_termuxdc_output *output);
 
 void handle_termuxdc_touch_event(termuxdc_event *e, struct wlr_termuxdc_output *output, uint64_t time_ms);
 

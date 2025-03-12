@@ -153,7 +153,7 @@ int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *
     return 0;
 }
 
-int handle_termuxdc_timer_event(struct wlr_termuxdc_output *output) {
+int handle_termuxdc_server_timer_event(struct wlr_termuxdc_output *output) {
     wlr_log(WLR_DEBUG, "termuxdc_timer_event triggered");
     bool redraw = false;
 

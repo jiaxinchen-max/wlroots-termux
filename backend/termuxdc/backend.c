@@ -101,6 +101,13 @@ static int handle_termuxdc_event(int fd, uint32_t mask, void *data) {
 
     return 0;
 }
+static int handle_termuxdc_timer_event(void *data){
+    struct wlr_termuxdc_backend *backend = data;
+    struct wlr_termuxdc_output *output, *output_tmp;
+    wl_list_for_each_safe(output, output_tmp, &backend->outputs, link) {
+        handle_termuxdc_server_timer_event(output);
+    }
+}
 
 static void *termuxdc_event_thread(void *data) {
     struct wlr_termuxdc_backend *backend = data;
