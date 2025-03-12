@@ -158,7 +158,7 @@ struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
     backend->input_event_source = wl_event_loop_add_fd(backend->loop, backend->input_event_fd,
                                                       events, handle_termuxdc_event, backend);
 
-    backend->input_event_timer = wl_event_loop_add_timer(backend->loop,handle_termuxdc_timer_event,backend)
+    backend->input_event_timer = wl_event_loop_add_timer(backend->loop,handle_termuxdc_timer_event,backend);
     wl_event_source_timer_update(backend->input_event_timer, 1000);
 
     termuxdc_wlr_queue_init(&backend->event_queue);
