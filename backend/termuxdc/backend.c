@@ -107,6 +107,7 @@ static int handle_termuxdc_timer_event(void *data){
     wl_list_for_each_safe(output, output_tmp, &backend->outputs, link) {
         handle_termuxdc_server_timer_event(output);
     }
+    return 0;
 }
 
 static void *termuxdc_event_thread(void *data) {
