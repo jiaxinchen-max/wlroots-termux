@@ -31,7 +31,8 @@ termuxdc_allocator_from_allocator(struct wlr_allocator *wlr_allocator) {
 static void buffer_destroy(struct wlr_buffer *wlr_buffer) {
     struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
     if (buffer->data) {
-        buffer->termuxdc_buffer_ptr->end_draw();
+        buffer->termuxdc_buffer_ptr->unlock(buffer->termuxdc_buffer_ptr->buffer, NULL);
+        buffer->data = NULL;
     }
 
     wlr_dmabuf_attributes_finish(&buffer->dmabuf);
