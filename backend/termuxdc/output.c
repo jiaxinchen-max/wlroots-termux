@@ -255,7 +255,7 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     struct wlr_output_state state;
     wlr_output_state_init(&state);
     wlr_output_state_set_render_format(&state, DRM_FORMAT_ABGR8888);
-    wlr_output_state_set_transform(&state, WL_OUTPUT_TRANSFORM_FLIPPED_180);
+    wlr_output_state_set_transform(&state, WL_OUTPUT_TRANSFORM_FLIPPED_90);
     wlr_output_state_set_custom_mode(&state, 1080, 1920, DEFAULT_REFRESH);
     wlr_output_init(&output->wlr_output, &backend->backend, &output_impl, backend->loop,
                     &state);
@@ -290,6 +290,6 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     wl_signal_emit_mutable(&backend->backend.events.new_output, wlr_output);
 
     wl_list_insert(&backend->outputs, &output->link);
-    wlr_log(WLR_DEBUG, "Scuuess to wlr_termuxdc_output_create");
+    wlr_log(WLR_DEBUG, "wlr termuxdc output create succeed");
     return wlr_output;
 }
