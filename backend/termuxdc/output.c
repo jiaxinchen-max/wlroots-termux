@@ -247,7 +247,7 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     //     return NULL;
     // }
 
-    int ret = display_client_init(1080,1920,4);
+    int ret = display_client_init(1920,1080,4);
     if (ret!=TERMUX_DC_OK){
         wlr_log(WLR_ERROR, "Failed to init display client");
     }
@@ -255,8 +255,8 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     struct wlr_output_state state;
     wlr_output_state_init(&state);
     wlr_output_state_set_render_format(&state, DRM_FORMAT_ABGR8888);
-    wlr_output_state_set_transform(&state, WL_OUTPUT_TRANSFORM_FLIPPED_90);
-    wlr_output_state_set_custom_mode(&state, 1080, 1920, DEFAULT_REFRESH);
+    wlr_output_state_set_transform(&state, WL_OUTPUT_TRANSFORM_FLIPPED_180);
+    wlr_output_state_set_custom_mode(&state, 1920, 1080, DEFAULT_REFRESH);
     wlr_output_init(&output->wlr_output, &backend->backend, &output_impl, backend->loop,
                     &state);
     wlr_output_state_finish(&state);
