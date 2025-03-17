@@ -152,6 +152,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
 
     int fd = -1;
     for (int i = 0; i < handle->numFds; i++) {
+        wlr_log(WLR_DEBUG,"version:%d,numFds:%d,numInts:%d,data[%d]:%d",handle->version,handle->numFds,handle->numInts,i,handle->data[i]);
         size_t size = lseek(handle->data[i], 0, SEEK_END);
         if (size < (buffer->desc.stride * buffer->desc.height * 4))
             continue;
@@ -159,7 +160,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
         fd = fcntl(handle->data[i], F_DUPFD_CLOEXEC, 0);
         break;
     }
-
+    
     if (fd < 0) {
         wlr_log(WLR_ERROR, "Failed to get dmabuf");
         tgui_hardware_buffer_destroy(alloc->conn, &buffer->buffer);
