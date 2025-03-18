@@ -140,13 +140,13 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     
     wlr_log(WLR_DEBUG,"width:%d,height:%d,layers:%d,format:%d,usage:%d,stride:%d,rfu0:%d,rfu1:%d",
         buffer->termuxdc_buffer_ptr->desc.width,
-        buffer->termuxdc_buffer_ptr->des.height,
-        buffer->termuxdc_buffer_ptr->des.layers,
-        buffer->termuxdc_buffer_ptr->des.format,
-        buffer->termuxdc_buffer_ptr->des.usage,
-        buffer->termuxdc_buffer_ptr->des.stride,
-        buffer->termuxdc_buffer_ptr->des.rfu0,
-        buffer->termuxdc_buffer_ptr->des.rfu1);
+        buffer->termuxdc_buffer_ptr->desc.height,
+        buffer->termuxdc_buffer_ptr->desc.layers,
+        buffer->termuxdc_buffer_ptr->desc.format,
+        buffer->termuxdc_buffer_ptr->desc.usage,
+        buffer->termuxdc_buffer_ptr->desc.stride,
+        buffer->termuxdc_buffer_ptr->desc.rfu0,
+        buffer->termuxdc_buffer_ptr->desc.rfu1);
     
     int fd = -1;
     for (int i = 0; i < handle->numFds; i++) {
