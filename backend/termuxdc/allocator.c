@@ -138,7 +138,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
 
     buffer->termuxdc_buffer_ptr->describe(buffer->termuxdc_buffer_ptr->buffer, &buffer->termuxdc_buffer_ptr->desc);
     
-    wlr_log(WLR_DEBUG,"width:%d,height:%d,layers:%d,format:%d,usage:%d,stride:%d,rfu0:%d,rfu1:%d",
+    wlr_log(WLR_DEBUG,"width:%d,height:%d,layers:%d,format:%d,usage:%ld,stride:%d,rfu0:%d,rfu1:%ld",
         buffer->termuxdc_buffer_ptr->desc.width,
         buffer->termuxdc_buffer_ptr->desc.height,
         buffer->termuxdc_buffer_ptr->desc.layers,
