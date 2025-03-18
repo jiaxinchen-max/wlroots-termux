@@ -70,8 +70,7 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
 
     *data = buffer->data;
     *format = buffer->termuxdc_buffer_ptr->format;
-    // *stride = buffer->termuxdc_buffer_ptr->desc.stride;
-    *stride = 4;
+    *stride = buffer->termuxdc_buffer_ptr->desc.stride;
     return true;
 }
 
@@ -138,6 +137,16 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     wlr_log(WLR_DEBUG, "termuxdc_native_handle_t version=%d,numFds=%d,numInts=%d", handle->version, handle->numFds,handle->numInts);
 
     buffer->termuxdc_buffer_ptr->describe(buffer->termuxdc_buffer_ptr->buffer, &buffer->termuxdc_buffer_ptr->desc);
+    
+    wlr_log(WLR_DEBUG,"width:%d,height:%d,layers:%d,format:%d,usage:%d,stride:%d,rfu0:%d,rfu1:%d",
+        buffer->termuxdc_buffer_ptr->desc.width,
+        buffer->termuxdc_buffer_ptr->des.height,
+        buffer->termuxdc_buffer_ptr->des.layers,
+        buffer->termuxdc_buffer_ptr->des.format,
+        buffer->termuxdc_buffer_ptr->des.usage,
+        buffer->termuxdc_buffer_ptr->des.stride,
+        buffer->termuxdc_buffer_ptr->des.rfu0,
+        buffer->termuxdc_buffer_ptr->des.rfu1);
     
     int fd = -1;
     for (int i = 0; i < handle->numFds; i++) {
