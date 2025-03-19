@@ -115,13 +115,13 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     if (buffer == NULL) {
         return NULL;
     }
+
+    int ret = display_client_init(width,height,0);
+    if (ret!=TERMUX_DC_OK){
+        goto fail;
+    }
     
     wlr_buffer_init(&buffer->wlr_buffer, &buffer_impl, width, height);
-
-    // int ret = display_client_init(width,height,4);
-    // if (ret!=TERMUX_DC_OK){
-    //     goto fail;
-    // }
 
     struct termuxdc_buffer *termuxdc_buffer_ptr = get_termuxdc_buffer();
     wlr_log(WLR_INFO, "Temux DC get_termuxdc_buffer");
