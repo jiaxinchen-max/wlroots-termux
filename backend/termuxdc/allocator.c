@@ -172,7 +172,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
         .format = format->format,
         .modifier = DRM_FORMAT_MOD_LINEAR,
         .offset[0] = 0,
-        .stride[0] = buffer->termuxdc_buffer_ptr->desc.stride * 4,
+        .stride[0] = buffer->termuxdc_buffer_ptr->desc.stride,
         .fd[0] = fd,
 
     };
