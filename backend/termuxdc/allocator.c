@@ -166,8 +166,8 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     }
     wlr_log(WLR_DEBUG, "success to get dmabuf");
     buffer->dmabuf = (struct wlr_dmabuf_attributes) {
-        .width = buffer->termuxdc_buffer_ptr->desc.stride*4,
-        .height = buffer->termuxdc_buffer_ptr->desc.height,
+        .width = buffer->termuxdc_buffer_ptr->desc.height,
+        .height = buffer->termuxdc_buffer_ptr->desc.stride,
         .n_planes = 1,
         .format = format->format,
         .modifier = DRM_FORMAT_MOD_LINEAR,
