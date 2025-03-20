@@ -30,9 +30,9 @@ termuxdc_allocator_from_allocator(struct wlr_allocator *wlr_allocator) {
 
 static void buffer_destroy(struct wlr_buffer *wlr_buffer) {
     struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
-    if (buffer->data) {
+    if (buffer->termuxdc_buffer_ptr->data) {
         buffer->termuxdc_buffer_ptr->unlock(buffer->termuxdc_buffer_ptr->buffer, NULL);
-        buffer->data = NULL;
+        buffer->termuxdc_buffer_ptr->data = NULL;
     }
 
     wlr_dmabuf_attributes_finish(&buffer->dmabuf);
@@ -57,11 +57,11 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
                                   size_t *stride) {
     struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
 
-    if (buffer->data == NULL) {
+    if (buffer->termuxdc_buffer_ptr->data  == NULL) {
         buffer->termuxdc_buffer_ptr->lock(buffer->termuxdc_buffer_ptr->buffer,
             AHARDWAREBUFFER_USAGE_CPU_READ_RARELY |
                 AHARDWAREBUFFER_USAGE_CPU_WRITE_RARELY,
-            -1, NULL, &buffer->termuxdc_buffer_ptr->b->data);
+            -1, NULL, &buffer->termuxdc_buffer_ptr->data);
         if (buffer->termuxdc_buffer_ptr->data == NULL) {
             wlr_log(WLR_ERROR, "AHardwareBuffer_lock failed");
             return false;
@@ -76,9 +76,9 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
 
 static void end_data_ptr_access(struct wlr_buffer *wlr_buffer) {
     struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
-    if (buffer->data) {
+    if (buffer->termuxdc_buffer_ptr->data ) {
         buffer->termuxdc_buffer_ptr->unlock(buffer->termuxdc_buffer_ptr->buffer, NULL);
-        buffer->data = NULL;
+        buffer->termuxdc_buffer_ptr->data = NULL;
     }
 }
 
