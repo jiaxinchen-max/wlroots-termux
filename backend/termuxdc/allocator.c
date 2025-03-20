@@ -61,14 +61,14 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
         buffer->termuxdc_buffer_ptr->lock(buffer->termuxdc_buffer_ptr->buffer,
             AHARDWAREBUFFER_USAGE_CPU_READ_RARELY |
                 AHARDWAREBUFFER_USAGE_CPU_WRITE_RARELY,
-            -1, NULL, &buffer->data);
-        if (buffer->data == NULL) {
+            -1, NULL, &buffer->termuxdc_buffer_ptr->b->data);
+        if (buffer->termuxdc_buffer_ptr->data == NULL) {
             wlr_log(WLR_ERROR, "AHardwareBuffer_lock failed");
             return false;
         }
     }
 
-    *data = buffer->data;
+    *data = buffer->termuxdc_buffer_ptr->data;
     *format = buffer->termuxdc_buffer_ptr->format;
     *stride = buffer->termuxdc_buffer_ptr->desc.stride;
     return true;

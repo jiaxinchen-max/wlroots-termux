@@ -106,7 +106,7 @@ struct wlr_termuxdc_buffer {
     struct wlr_buffer wlr_buffer;
     struct termuxdc_buffer *termuxdc_buffer_ptr;
 
-    void *data;
+    // void *data;
     struct wl_list link;
     struct wlr_dmabuf_attributes dmabuf;
 };
