@@ -58,11 +58,10 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
     struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
 
     if (buffer->data == NULL) {
-        // buffer->termuxdc_buffer_ptr->lock(buffer->termuxdc_buffer_ptr->buffer,
-        //     AHARDWAREBUFFER_USAGE_CPU_READ_RARELY |
-        //         AHARDWAREBUFFER_USAGE_CPU_WRITE_RARELY,
-        //     -1, NULL, &buffer->data);
-            buffer->termuxdc_buffer_ptr->begin_draw(&buffer->data);
+        buffer->termuxdc_buffer_ptr->lock(buffer->termuxdc_buffer_ptr->buffer,
+            AHARDWAREBUFFER_USAGE_CPU_READ_RARELY |
+                AHARDWAREBUFFER_USAGE_CPU_WRITE_RARELY,
+            -1, NULL, &buffer->data);
         if (buffer->data == NULL) {
             wlr_log(WLR_ERROR, "AHardwareBuffer_lock failed");
             return false;
@@ -78,8 +77,7 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
 static void end_data_ptr_access(struct wlr_buffer *wlr_buffer) {
     struct wlr_termuxdc_buffer *buffer = termuxdc_buffer_from_buffer(wlr_buffer);
     if (buffer->data) {
-        // buffer->termuxdc_buffer_ptr->unlock(buffer->termuxdc_buffer_ptr->buffer, NULL);
-        buffer->termuxdc_buffer_ptr->end_draw();
+        buffer->termuxdc_buffer_ptr->unlock(buffer->termuxdc_buffer_ptr->buffer, NULL);
         buffer->data = NULL;
     }
 }
