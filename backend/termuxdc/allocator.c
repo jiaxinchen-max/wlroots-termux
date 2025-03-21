@@ -149,7 +149,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
         wlr_log(WLR_DEBUG,"version:%d,numFds:%d,numInts:%d,data[%d]:%d",handle->version,handle->numFds,handle->numInts,i,handle->data[i]);
         size_t size = lseek(handle->data[i], 0, SEEK_END);
         wlr_log(WLR_DEBUG, "handle->data[%d]:%d",i, handle->data[i]);
-        if (size < (termuxdc_buffer_ptr->desc.stride * termuxdc_buffer_ptr->desc.height * 4))
+        if (size < (termuxdc_buffer_ptr->desc.stride * termuxdc_buffer_ptr->desc.width * 4))
             continue;
 
         fd = fcntl(handle->data[i], F_DUPFD_CLOEXEC, 0);
@@ -162,8 +162,8 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     }
     wlr_log(WLR_DEBUG, "success to get dmabuf");
     buffer->dmabuf = (struct wlr_dmabuf_attributes) {
-        .width = buffer->termuxdc_buffer_ptr->desc.stride,
-        .height = buffer->termuxdc_buffer_ptr->desc.height,
+        .width = buffer->termuxdc_buffer_ptr->desc.height,
+        .height = buffer->termuxdc_buffer_ptr->desc.stride,
         .n_planes = 1,
         .format = format->format,
         .modifier = DRM_FORMAT_MOD_LINEAR,
