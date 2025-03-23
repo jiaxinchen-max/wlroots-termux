@@ -122,6 +122,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     if (ret!=TERMUX_DC_OK){
         goto fail;
     }
+    event_socket_init_default();
 
     struct termuxdc_buffer *termuxdc_buffer_ptr = get_termuxdc_buffer();
     wlr_log(WLR_INFO, "Temux DC get_termuxdc_buffer");
