@@ -101,14 +101,6 @@ static int handle_termuxdc_event(int fd, uint32_t mask, void *data) {
 
     return 0;
 }
-static int handle_termuxdc_timer_event(void *data){
-    struct wlr_termuxdc_backend *backend = data;
-    struct wlr_termuxdc_output *output, *output_tmp;
-    wl_list_for_each_safe(output, output_tmp, &backend->outputs, link) {
-        handle_termuxdc_server_timer_event(output);
-    }
-    return 0;
-}
 
 static void *termuxdc_event_thread(void *data) {
     struct wlr_termuxdc_backend *backend = data;
@@ -166,9 +158,6 @@ struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
     uint32_t events = WL_EVENT_READABLE | WL_EVENT_ERROR | WL_EVENT_HANGUP;
     backend->input_event_source = wl_event_loop_add_fd(backend->loop, backend->input_event_fd,
                                                       events, handle_termuxdc_event, backend);
-
-    backend->input_event_timer = wl_event_loop_add_timer(backend->loop,handle_termuxdc_timer_event,backend);
-    wl_event_source_timer_update(backend->input_event_timer, 1000);
 
     termuxdc_wlr_queue_init(&backend->event_queue);
     pthread_create(&backend->input_event_thread, NULL, termuxdc_event_thread, backend);

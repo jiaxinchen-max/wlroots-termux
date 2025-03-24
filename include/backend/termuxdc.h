@@ -94,7 +94,6 @@ struct wlr_termuxdc_backend {
     int input_event_fd;
     pthread_t input_event_thread;
     struct wl_event_source *input_event_source;
-    struct wl_event_source *input_event_timer;
 };
 
 struct wlr_termuxdc_allocator {
@@ -150,8 +149,6 @@ struct wlr_allocator *wlr_termuxdc_backend_get_allocator(struct wlr_termuxdc_bac
 struct wlr_termuxdc_buffer *termuxdc_buffer_from_buffer(struct wlr_buffer *wlr_buffer);
 
 int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *output);
-
-int handle_termuxdc_server_timer_event(struct wlr_termuxdc_output *output);
 
 void handle_termuxdc_touch_event(termuxdc_event *e, struct wlr_termuxdc_output *output, uint64_t time_ms);
 

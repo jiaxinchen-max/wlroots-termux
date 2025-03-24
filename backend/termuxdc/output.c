@@ -153,26 +153,6 @@ int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *
     return 0;
 }
 
-int handle_termuxdc_server_timer_event(struct wlr_termuxdc_output *output) {
-    wlr_log(WLR_DEBUG, "termuxdc_timer_event triggered");
-    bool redraw = false;
-
-    if (termuxdc_wlr_queue_length(&output->idle_queue) > 0) {
-        struct wl_list *elm = termuxdc_wlr_queue_pull(&output->idle_queue, true);
-        struct wlr_termuxdc_buffer *buf = wl_container_of(elm, buf, link);
-        wlr_buffer_unlock(&buf->wlr_buffer);
-        redraw = true;
-    } else if (termuxdc_wlr_queue_length(&output->present_queue) < WLR_SWAPCHAIN_CAP - 1) {
-        redraw = true;
-    }
-
-    if (redraw) {
-        wlr_output_send_frame(&output->wlr_output);
-    }
-
-    return 1;
-}
-
 static void *present_queue_thread(void *data) {
     struct wlr_termuxdc_output *output = data;
     output->present_thread_run = true;
