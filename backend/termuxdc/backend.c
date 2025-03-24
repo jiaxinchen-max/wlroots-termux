@@ -108,8 +108,9 @@ static void *termuxdc_event_thread(void *data) {
     termuxdc_event event;
     while (true) {
         if (event_wait(&event) != TERMUX_DC_OK){
+            usleep(1000000000);
             continue;
-            }
+        }
         wlr_log(WLR_INFO, "termuxdc event : %d",event.type);
         struct wlr_termuxdc_event *wlr_event = calloc(1, sizeof(*wlr_event));
         if (wlr_event) {
