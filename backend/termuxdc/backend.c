@@ -105,10 +105,10 @@ static int handle_termuxdc_event(int fd, uint32_t mask, void *data) {
 
 static void *termuxdc_event_thread(void *data) {
     struct wlr_termuxdc_backend *backend = data;
-    wlr_log(WLR_INFO, "termuxdc_event_thread started");
+    wlr_log(WLR_INFO, "termuxdc_event_thread started\n");
     termuxdc_event event;
     while (true) {
-        wlr_log(WLR_INFO, "<=======termuxdc_event_thread=========>");
+        // wlr_log(WLR_INFO, "<=======termuxdc_event_thread=========>");
         if (event_wait(&event) != TERMUX_DC_OK){
             sleep(1);
             continue;
