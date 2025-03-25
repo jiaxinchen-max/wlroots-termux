@@ -118,7 +118,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     
     wlr_buffer_init(&buffer->wlr_buffer, &buffer_impl, width, height);
 
-    int ret = display_client_init(width,height,0);
+    int ret = display_client_init(width,height,4);
     if (ret!=TERMUX_DC_OK){
         goto fail;
     }

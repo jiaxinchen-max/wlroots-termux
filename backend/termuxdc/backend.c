@@ -20,9 +20,10 @@ static bool backend_start(struct wlr_backend *wlr_backend) {
     wl_signal_emit_mutable(&backend->backend.events.new_input, &backend->keyboard.base);
     wl_signal_emit_mutable(&backend->backend.events.new_input, &backend->pointer.base);
 
-    for (uint32_t i = 0; i < backend->requested_outputs; i++) {
-        wlr_termuxdc_output_create(&backend->backend);
-    }
+    // for (uint32_t i = 0; i < backend->requested_outputs; i++) {
+    //     wlr_termuxdc_output_create(&backend->backend);
+    // }
+    wlr_termuxdc_output_create(&backend->backend);
     return true;
 }
 
