@@ -108,6 +108,7 @@ static void *termuxdc_event_thread(void *data) {
     wlr_log(WLR_INFO, "termuxdc_event_thread started");
     termuxdc_event event;
     while (true) {
+        wlr_log(WLR_INFO, "<=======termuxdc_event_thread=========>");
         if (event_wait(&event) != TERMUX_DC_OK){
             usleep(1000000000);
             continue;
