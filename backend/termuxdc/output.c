@@ -227,7 +227,8 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     //     return NULL;
     // }
 
-    int ret = display_client_init(1024,768,4);
+    // int ret = display_client_init(1024,768,4);
+    int ret = display_client_init(768,1024,4);
     if (ret!=TERMUX_DC_OK){
         return NULL;
     }
@@ -271,6 +272,6 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     wl_signal_emit_mutable(&backend->backend.events.new_output, wlr_output);
 
     wl_list_insert(&backend->outputs, &output->link);
-    wlr_log(WLR_DEBUG, "wlr termuxdc output create succeed");
+    // wlr_log(WLR_DEBUG, "wlr termuxdc output create succeed");
     return wlr_output;
 }

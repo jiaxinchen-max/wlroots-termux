@@ -15,7 +15,7 @@ struct wlr_termuxdc_backend *termuxdc_backend_from_backend(struct wlr_backend *w
 static bool backend_start(struct wlr_backend *wlr_backend) {
     struct wlr_termuxdc_backend *backend = termuxdc_backend_from_backend(wlr_backend);
     backend->started = true;
-    wlr_log(WLR_INFO, "Starting Termux:Display client backend");
+    wlr_log(WLR_INFO, "Starting TermuxDC backend");
 
     wl_signal_emit_mutable(&backend->backend.events.new_input, &backend->keyboard.base);
     wl_signal_emit_mutable(&backend->backend.events.new_input, &backend->pointer.base);
@@ -23,7 +23,6 @@ static bool backend_start(struct wlr_backend *wlr_backend) {
     for (uint32_t i = 0; i < backend->requested_outputs; i++) {
         wlr_termuxdc_output_create(&backend->backend);
     }
-    // wlr_termuxdc_output_create(&backend->backend);
     return true;
 }
 
@@ -139,7 +138,7 @@ const struct wlr_keyboard_impl termuxdc_keyboard_impl = {
 };
 
 struct wlr_backend *wlr_termuxdc_backend_create(struct wl_event_loop *loop) {
-    wlr_log(WLR_INFO, "Creating Termux:Display client backend");
+    wlr_log(WLR_INFO, "Creating TermuxDC backend");
 
     struct wlr_termuxdc_backend *backend = calloc(1, sizeof(*backend));
     if (!backend) {

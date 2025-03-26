@@ -131,7 +131,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     wlr_log(WLR_DEBUG, "Created termuxdc_hardware_buffer %dx%d", width, height);
 
     buffer->termuxdc_buffer_ptr->describe(buffer->termuxdc_buffer_ptr->buffer, &buffer->termuxdc_buffer_ptr->desc);
-    wlr_log(WLR_DEBUG,"width:%d,height:%d,layers:%d,format:%d,usage:%ld,stride:%d,rfu0:%d,rfu1:%ld",
+    wlr_log(WLR_DEBUG,"width:%d,\nheight:%d,\nlayers:%d,\nformat:%d,\nusage:%ld,\nstride:%d,\nrfu0:%d,\nrfu1:%ld",
         buffer->termuxdc_buffer_ptr->desc.width,
         buffer->termuxdc_buffer_ptr->desc.height,
         buffer->termuxdc_buffer_ptr->desc.layers,
@@ -147,10 +147,10 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     
     int fd = -1;
     for (int i = 0; i < handle->numFds; i++) {
-        wlr_log(WLR_DEBUG,"version:%d,numFds:%d,numInts:%d,data[%d]:%d",handle->version,handle->numFds,handle->numInts,i,handle->data[i]);
+        // wlr_log(WLR_DEBUG,"version:%d,numFds:%d,numInts:%d,data[%d]:%d",handle->version,handle->numFds,handle->numInts,i,handle->data[i]);
         size_t size = lseek(handle->data[i], 0, SEEK_END);
         wlr_log(WLR_DEBUG, "handle->data[%d]:%d",i, handle->data[i]);
-        if (size < (termuxdc_buffer_ptr->desc.stride * termuxdc_buffer_ptr->desc.width * 4))
+        if (size < (termuxdc_buffer_ptr->desc.stride * termuxdc_buffer_ptr->desc.height*4))
             continue;
 
         fd = fcntl(handle->data[i], F_DUPFD_CLOEXEC, 0);
@@ -169,13 +169,13 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
         .format = format->format,
         .modifier = DRM_FORMAT_MOD_LINEAR,
         .offset[0] = 0,
-        .stride[0] = buffer->termuxdc_buffer_ptr->desc.stride * 4,
+        .stride[0] = buffer->termuxdc_buffer_ptr->desc.stride*4,
         .fd[0] = fd,
 
     };
 
     buffer->termuxdc_buffer_ptr->format = format->format;
-    wlr_log(WLR_DEBUG, "success to allocator_create_buffer");
+    // wlr_log(WLR_DEBUG, "success to allocator_create_buffer");
     return &buffer->wlr_buffer;
 
 fail:
