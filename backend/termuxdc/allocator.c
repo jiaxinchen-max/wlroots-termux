@@ -96,11 +96,11 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
                                                   const struct wlr_drm_format *format) {
     struct wlr_termuxdc_allocator *alloc = termuxdc_allocator_from_allocator(wlr_allocator);
     
-    wlr_log(WLR_INFO, "Temux DC bufer cap %d", alloc->wlr_allocator.buffer_caps);
+    wlr_log(WLR_INFO, "Termux DC bufer cap %d", alloc->wlr_allocator.buffer_caps);
 
     if (!wlr_drm_format_has(format, DRM_FORMAT_MOD_INVALID) &&
         !wlr_drm_format_has(format, DRM_FORMAT_MOD_LINEAR)) {
-        wlr_log(WLR_ERROR, "Temux DC allocator only supports INVALID and "
+        wlr_log(WLR_ERROR, "Termux DC allocator only supports INVALID and "
                            "LINEAR modifiers");
         return NULL;
     }
@@ -125,7 +125,7 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
     // event_socket_init_default();
 
     struct termuxdc_buffer *termuxdc_buffer_ptr = get_termuxdc_buffer();
-    wlr_log(WLR_INFO, "Temux DC get_termuxdc_buffer");
+    wlr_log(WLR_INFO, "Termux DC get_termuxdc_buffer");
     buffer->termuxdc_buffer_ptr = termuxdc_buffer_ptr;
 
     wlr_log(WLR_DEBUG, "Created termuxdc_hardware_buffer %dx%d", width, height);
