@@ -227,10 +227,11 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     //     return NULL;
     // }
 
-    // int ret = display_client_init(400,300,0);
-    // if (ret!=TERMUX_DC_OK){
-    //     wlr_log(WLR_ERROR, "Failed to init display client");
-    // }
+    int ret = display_client_init(1024,768,4);
+    if (ret!=TERMUX_DC_OK){
+        return NULL;
+    }
+    event_socket_init_default();
 
     struct wlr_output_state state;
     wlr_output_state_init(&state);
