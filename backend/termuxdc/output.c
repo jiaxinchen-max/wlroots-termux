@@ -114,7 +114,7 @@ int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *
     case EVENT_SCREEN_SIZE: {
         int ret = display_client_init(e->screenSize.width,e->screenSize.height,4);
         if (ret!=TERMUX_DC_OK){
-            break;;
+            break;
         }
         event_socket_init_default();
         struct wlr_output_state state;
