@@ -148,6 +148,16 @@ static struct wlr_buffer *allocator_create_buffer(struct wlr_allocator *wlr_allo
 
     buffer->describe(buffer->buffer.buffer, &buffer->desc);
 
+    wlr_log(WLR_DEBUG,"width:%d,\nheight:%d,\nlayers:%d,\nformat:%d,\nusage:%ld,\nstride:%d,\nrfu0:%d,\nrfu1:%ld",
+        buffer->desc.width,
+        buffer->desc.height,
+        buffer->desc.layers,
+        buffer->desc.format,
+        buffer->desc.usage,
+        buffer->desc.stride,
+        buffer->desc.rfu0,
+        buffer->desc.rfu1);
+
     const native_handle_t *handle = buffer->getNativeHandle(buffer->buffer.buffer);
 
     int fd = -1;
