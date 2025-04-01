@@ -232,7 +232,7 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     //     return NULL;
     // }
 
-    int ret = display_client_init(800,600,4);
+    int ret = display_client_init(1080,2400,4);
     // int ret = display_client_init(1080,2274,4);
     if (ret!=TERMUX_DC_OK){
         return NULL;
