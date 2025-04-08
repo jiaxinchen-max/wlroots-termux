@@ -70,7 +70,7 @@ static bool begin_data_ptr_access(struct wlr_buffer *wlr_buffer,
 
     *data = buffer->termuxdc_buffer_ptr->data;
     *format = buffer->termuxdc_buffer_ptr->format;
-    *stride = buffer->termuxdc_buffer_ptr->desc.stride;
+    *stride = buffer->termuxdc_buffer_ptr->desc.stride*4;
     return true;
 }
 
