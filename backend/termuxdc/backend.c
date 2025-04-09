@@ -112,7 +112,7 @@ static void *termuxdc_event_thread(void *data) {
             sleep(1);
             continue;
         }
-        wlr_log(WLR_INFO, "termuxdc event : %d",event.type);
+        // wlr_log(WLR_INFO, "termuxdc event : %d",event.type);
         struct wlr_termuxdc_event *wlr_event = calloc(1, sizeof(*wlr_event));
         if (wlr_event) {
             memcpy(&wlr_event->e, &event, sizeof(termuxdc_event));
