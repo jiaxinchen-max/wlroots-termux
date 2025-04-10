@@ -170,8 +170,8 @@ static void *present_queue_thread(void *data) {
             termuxdc_wlr_queue_push(&output->idle_queue, &buffer->link);
             break;
         }
-
-       usleep(1000000000 / DEFAULT_REFRESH);
+        draw_frame();
+        // usleep(1000000000 / DEFAULT_REFRESH);
 
         termuxdc_wlr_queue_push(&output->idle_queue, &buffer->link);
 
