@@ -112,7 +112,7 @@ int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *
         break;
     }
     case EVENT_SCREEN_SIZE: {
-        int ret = display_client_init(e->screenSize.width,e->screenSize.height,4);
+        int ret = display_client_init(e->screenSize.width,e->screenSize.height);
         if (ret!=TERMUX_DC_OK){
             break;
         }
@@ -232,7 +232,7 @@ struct wlr_output *wlr_termuxdc_output_create(struct wlr_backend *wlr_backend) {
     //     return NULL;
     // }
 
-    int ret = display_client_init(1080,1920,4);
+    int ret = display_client_init(1080,1920);
     if (ret!=TERMUX_DC_OK){
         return NULL;
     }
