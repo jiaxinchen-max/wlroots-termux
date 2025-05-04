@@ -143,7 +143,7 @@ void handle_termuxdc_touch_event(termuxdc_event *e, struct wlr_termuxdc_output *
 void handle_termux_mouse_event(termuxdc_event *e, struct wlr_termuxdc_output *output,uint64_t time_ms){
     switch (e->mouse.detail)
     { 
-    case TDC_MOUSE_UNDEFINE_BUTTON:{
+    case TDC_MOUSE_UNDEFINE:{
         move_cursor(output, e->mouse.x, e->mouse.y, time_ms);
         break;
     } 
@@ -166,7 +166,7 @@ void handle_termux_mouse_event(termuxdc_event *e, struct wlr_termuxdc_output *ou
         }
         break;
     }
-    case TDC_MOUSE_SCROLL{
+    case TDC_MOUSE_SCROLL:{
         break;
     }
     default:
