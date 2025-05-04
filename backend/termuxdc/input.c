@@ -140,7 +140,7 @@ void handle_termuxdc_touch_event(termuxdc_event *e, struct wlr_termuxdc_output *
     }
     }
 }
-void handle_termux_mouse_event(termuxdc_event *e, struct wlr_termuxdc_output *output,uint64_t time_ms){
+void handle_termuxdc_mouse_event(termuxdc_event *e, struct wlr_termuxdc_output *output,uint64_t time_ms){
     switch (e->mouse.detail)
     { 
     case TDC_MOUSE_UNDEFINE:{
