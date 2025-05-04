@@ -111,6 +111,9 @@ int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *
         handle_termuxdc_touch_event(e, output, time_ms);
         break;
     }
+    case EVENT_MOUSE:{
+        handle_termuxdc_mouse_event(e,output,time_ms);
+    }
     case EVENT_SCREEN_SIZE: {
         int ret = display_client_init(e->screenSize.width,e->screenSize.height);
         if (ret!=TERMUX_DC_OK){

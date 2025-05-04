@@ -140,6 +140,39 @@ void handle_termuxdc_touch_event(termuxdc_event *e, struct wlr_termuxdc_output *
     }
     }
 }
+void handle_termux_mouse_event(termuxdc_event *e, struct wlr_termuxdc_output *output,uint64_t time_ms){
+    switch (e->mouse.detail)
+    { 
+    case TDC_MOUSE_UNDEFINE_BUTTON:{
+        move_cursor(output, e->mouse.x, e->mouse.y, time_ms);
+        break;
+    } 
+    case TDC_MOUSE_LEFT_BUTTON:{
+        if (e->mouse.down){
+            send_pointer_button(output, BTN_LEFT, WL_POINTER_BUTTON_STATE_PRESSED, time_ms);
+        }else{
+            send_pointer_button(output, BTN_LEFT, WL_POINTER_BUTTON_STATE_RELEASED, time_ms);
+        }
+        break; 
+    }  
+    case TDC_MOUSE_MIDDLE_BUTTON:{
+        break;
+    } 
+    case TDC_MOUSE_RIGHT_BUTTON:{
+        if (e->mouse.down){
+            send_pointer_button(output, BTN_RIGHT, WL_POINTER_BUTTON_STATE_PRESSED, time_ms);
+        }else{
+            send_pointer_button(output, BTN_RIGHT, WL_POINTER_BUTTON_STATE_RELEASED, time_ms);
+        }
+        break;
+    }
+    case TDC_MOUSE_SCROLL{
+        break;
+    }
+    default:
+        break;
+    }
+}
 
 static const struct {
     uint32_t android, linux, wlr_mod;
