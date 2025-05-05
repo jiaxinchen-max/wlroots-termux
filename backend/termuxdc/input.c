@@ -6,6 +6,8 @@
 #include "backend/termuxdc.h"
 
 static void
+
+
 send_pointer_position(struct wlr_termuxdc_output *output, double x, double y, uint32_t time_ms) {
     struct wlr_pointer_motion_absolute_event ev = {
         .pointer = &output->backend->pointer,

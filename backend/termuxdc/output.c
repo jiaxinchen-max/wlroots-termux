@@ -112,7 +112,9 @@ int handle_termuxdc_server_event(termuxdc_event *e, struct wlr_termuxdc_output *
         break;
     }
     case EVENT_MOUSE:{
+        wlr_log(WLR_INFO,"detail:%d, dx:%f, dy:%f, time_ms:%ld",e->mouse.detail,e->mouse.x, e->mouse.y, time_ms);
         handle_termuxdc_mouse_event(e,output,time_ms);
+        break;
     }
     case EVENT_SCREEN_SIZE: {
         int ret = display_client_init(e->screenSize.width,e->screenSize.height);
