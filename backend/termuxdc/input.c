@@ -146,7 +146,17 @@ void handle_termuxdc_mouse_event(termuxdc_event *e, struct wlr_termuxdc_output *
     switch (e->mouse.detail)
     { 
     case TDC_MOUSE_UNDEFINE:{
-        move_cursor(output, e->mouse.x, e->mouse.y, time_ms);
+            double x = (double) e->mouse.x / output->wlr_output.width;
+            double y = (double) e->mouse.y / output->wlr_output.height;
+            double px = (double) 1 / output->wlr_output.width;
+            double py = (double) 1 / output->wlr_output.height;
+            double dx = output->touch_pointer.x - x;
+            double dy = output->touch_pointer.y - y;
+            if (dx >= px || dx <= -px || dy >= py || dy <= -py) {
+                output->touch_pointer.x -= dx;
+                output->touch_pointer.y -= dy;
+            }
+            move_cursor(output, dx, dy, time_ms);
         break;
     } 
     case TDC_MOUSE_LEFT_BUTTON:{
