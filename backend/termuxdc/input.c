@@ -152,8 +152,8 @@ void handle_termuxdc_mouse_event(termuxdc_event *e, struct wlr_termuxdc_output *
             double py = (double) 1 / output->wlr_output.height;
         
             if (x >= px || x <= -px || y >= py || y <= -py) {
-                output->touch_pointer.x -= x;
-                output->touch_pointer.y -= y;
+                output->touch_pointer.x += x;
+                output->touch_pointer.y += y;
             }
             move_cursor(output, x, y, time_ms);
         break;
