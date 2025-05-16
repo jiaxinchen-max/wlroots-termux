@@ -150,12 +150,14 @@ void handle_termuxdc_mouse_event(termuxdc_event *e, struct wlr_termuxdc_output *
             double y = (double) e->mouse.y / output->wlr_output.height;
             double px = (double) 1 / output->wlr_output.width;
             double py = (double) 1 / output->wlr_output.height;
+            double dx = px-x;
+            double dy = py-y;
         
-            if (x >= px || x <= -px || y >= py || y <= -py) {
-                output->touch_pointer.x += x;
-                output->touch_pointer.y += y;
+            if (dx >= px || dx <= -px || dy >= py || dy <= -py) {
+                output->touch_pointer.x -= x;
+                output->touch_pointer.y -= y;
             }
-            move_cursor(output, x, y, time_ms);
+            move_cursor(output, dx, dy, time_ms);
         break;
     } 
     case TDC_MOUSE_LEFT_BUTTON:{
