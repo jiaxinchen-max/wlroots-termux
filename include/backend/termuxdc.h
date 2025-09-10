@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <termux/display/client/client.h>
 #include <termux/display/client/termuxdc_event.h>
+#include <termux/display/client/buffer.h>
 
 #include <wlr/backend/interface.h>
 #include <wlr/backend/termuxdc.h>
@@ -104,6 +105,7 @@ struct wlr_termuxdc_allocator {
 struct wlr_termuxdc_buffer {
     struct wlr_buffer wlr_buffer;
     struct termuxdc_buffer *termuxdc_buffer_ptr;
+    struct LorieBuffer *lorie_buffer_ptr;
 
     // void *data;
     struct wl_list link;

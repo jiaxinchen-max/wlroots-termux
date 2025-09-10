@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <termux/display/client/client.h>
 #include <termux/display/client/termuxdc_event.h>
+#include <termux/display/client/buffer.h>
 
 #include "backend/termuxdc.h"
 #include "util/time.h"
